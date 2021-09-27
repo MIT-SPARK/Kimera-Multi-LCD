@@ -144,6 +144,5 @@ struct LcdParams {
 };
 
 typedef std::map<RobotPoseId, VLCFrame, std::less<RobotPoseId> > VLCFrameDict;
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 }  // namespace kimera_multi_lcd

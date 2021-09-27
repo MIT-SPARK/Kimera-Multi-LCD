@@ -30,6 +30,7 @@ catkin_simple()
 
 cs_add_library(${PROJECT_NAME} 
   src/LoopClosureDetector.cpp
+  src/LcdThirdPartyWrapper.cpp
   src/types.cpp
 )
 

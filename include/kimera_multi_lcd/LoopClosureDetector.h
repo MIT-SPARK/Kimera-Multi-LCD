@@ -34,9 +34,6 @@ class LoopClosureDetector {
   // Load params and initialize
   void loadAndInitialize(const LcdParams& params);
 
-  // For debugging purpose
-  void saveLoopClosuresToFile(const std::string filename);
-
   // Add new bow vector to databse
   void addBowVector(const RobotPoseId& id, const DBoW2::BowVector& bow_vector);
 
@@ -61,12 +58,20 @@ class LoopClosureDetector {
                    const std::vector<unsigned int>& i_match,
                    gtsam::Pose3* T_query_match);
 
-  inline void getLoopClosures(std::vector<VLCEdge>* loop_closures) {
-    *loop_closures = loop_closures_;
-  }
-
   inline void addVLCFrame(const RobotPoseId& id, const VLCFrame& frame) {
     vlc_frames_[id] = frame;
+  }
+
+  inline bool frameExists(const RobotPoseId& id) const {
+    return vlc_frames_.find(id) != vlc_frames_.end();
+  }
+
+  inline size_t getNumGeomVerificationsMono() const {
+    return total_geom_verifications_mono_;
+  }
+
+  inline size_t getNumGeomVerifications() const {
+    return total_geometric_verifications_;
   }
 
  private:
@@ -95,11 +100,6 @@ class LoopClosureDetector {
 
   // Dictionary of VLC frames
   VLCFrameDict vlc_frames_;
-
-  // List of discovered loop closures
-  std::vector<VLCEdge> loop_closures_;
-  std::vector<size_t> inlier_count_;
-  std::vector<double> inlier_percentage_;
 };
 
 }  // namespace kimera_multi_lcd

@@ -70,22 +70,28 @@ bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
   for (const auto& db : db_BoW_) {
     // If query and database from same robot
     if (params_.inter_robot_only_ && robot_query == db.first) continue;
+    // Check that robot is initialized
+    if (latest_bowvec_.find(robot_query) == latest_bowvec_.end()) {
+      latest_bowvec_[robot_query] = bow_vector_query;
+      continue;
+    }
     double nss_factor = db.second->getVocabulary()->score(
         bow_vector_query, latest_bowvec_[robot_query]);
+    latest_bowvec_[robot_query] = bow_vector_query;
     int max_possible_match_id = -1;
     if (robot_query == db.first) {
       // If from the same robot, do not attempt to find loop closures if the
       // poses are close to each other
-      if (pose_query > 0)
+      if (pose_query > 0) {
         max_possible_match_id =
             static_cast<int>(next_pose_id_[robot_query]) - 1;
-      max_possible_match_id -= params_.dist_local_;
+        max_possible_match_id -= params_.dist_local_;
+        if (max_possible_match_id < 0) max_possible_match_id = 0;
+      }
     }
     if (nss_factor < params_.min_nss_factor_) {
-      return false;
+      continue;  // nss too low, look at next robot traj
     }
-    if (max_possible_match_id < 0) max_possible_match_id = 0;
-
     DBoW2::QueryResults query_result;
     db.second->query(bow_vector_query,
                      query_result,
@@ -283,52 +289,12 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
-    inlier_count_.push_back(ransac.inliers_.size());
-    inlier_percentage_.push_back(inlier_percentage);
-
     ROS_INFO_STREAM("Verified loop closure!");
 
     return true;
   }
 
   return false;
-}
-
-void LoopClosureDetector::saveLoopClosuresToFile(const std::string filename) {
-  std::ofstream file;
-  file.open(filename);
-
-  assert(loop_closures_.size() == inlier_count_.size());
-  assert(loop_closures_.size() == inlier_percentage_.size());
-
-  std::vector<VLCEdge> loop_closures;
-  getLoopClosures(&loop_closures);
-
-  // file format
-  file << "robot1,pose1,robot2,pose2,qx,qy,qz,qw,tx,ty,tz,inlier_num,inlier_"
-          "percent\n";
-
-  for (size_t i = 0; i < loop_closures.size(); ++i) {
-    VLCEdge edge = loop_closures[i];
-    file << edge.vertex_src_.first << ",";
-    file << edge.vertex_src_.second << ",";
-    file << edge.vertex_dst_.first << ",";
-    file << edge.vertex_dst_.second << ",";
-    gtsam::Pose3 pose = edge.T_src_dst_;
-    gtsam::Quaternion quat = pose.rotation().toQuaternion();
-    gtsam::Point3 point = pose.translation();
-    file << quat.x() << ",";
-    file << quat.y() << ",";
-    file << quat.z() << ",";
-    file << quat.w() << ",";
-    file << point.x() << ",";
-    file << point.y() << ",";
-    file << point.z() << ",";
-    file << inlier_count_[i] << ",";
-    file << inlier_percentage_[i] << "\n";
-  }
-
-  file.close();
 }
 
 }  // namespace kimera_multi_lcd
