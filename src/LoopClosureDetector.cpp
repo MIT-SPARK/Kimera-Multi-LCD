@@ -77,7 +77,6 @@ bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
     }
     double nss_factor = db.second->getVocabulary()->score(
         bow_vector_query, latest_bowvec_[robot_query]);
-    latest_bowvec_[robot_query] = bow_vector_query;
     int max_possible_match_id = -1;
     if (robot_query == db.first) {
       // If from the same robot, do not attempt to find loop closures if the
@@ -97,6 +96,12 @@ bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
                      query_result,
                      params_.max_db_results_,
                      max_possible_match_id);
+
+    // Sort query_result in descending score. 
+    // This should be done by the query function already, 
+    // but we do it again in case that behavior changes in the future.
+    std::sort(query_result.begin(), query_result.end(), std::greater<DBoW2::Result>());
+
     // Remove low scores from the QueryResults based on nss.
     DBoW2::QueryResults::iterator query_it =
         lower_bound(query_result.begin(),
