@@ -16,6 +16,7 @@ find_package(Boost REQUIRED
   chrono
 )
 
+find_package(GTSAM REQUIRED)
 find_package(opengv REQUIRED)
 find_package(DBoW2 REQUIRED)
 if(NOT TARGET DBoW2::DBoW2)
