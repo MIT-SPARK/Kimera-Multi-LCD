@@ -37,10 +37,16 @@ class LoopClosureDetector {
   // Add new bow vector to databse
   void addBowVector(const RobotPoseId& id, const DBoW2::BowVector& bow_vector);
 
-  // Find loop closure
+  // Find loop closure against the trajectory of the specified robot
+  bool detectLoopWithRobot(size_t robot, 
+                           const RobotPoseId& vertex_query,
+                           const DBoW2::BowVector& bow_vector_query,
+                           std::vector<RobotPoseId>* vertex_matches);
+
+  // Find loop closure against all robots in the database
   bool detectLoop(const RobotPoseId& vertex_query,
                   const DBoW2::BowVector& bow_vector_query,
-                  std::vector<RobotPoseId>* vertex_match);
+                  std::vector<RobotPoseId>* vertex_matches);
 
   void computeMatchedIndices(const RobotPoseId& vertex_query,
                              const RobotPoseId& vertex_match,
