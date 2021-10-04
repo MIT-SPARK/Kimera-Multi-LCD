@@ -58,84 +58,117 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
   latest_bowvec_[id.first] = bow_vector;
 }
 
+bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 
+                          const RobotPoseId& vertex_query,
+                          const DBoW2::BowVector& bow_vector_query,
+                          std::vector<RobotPoseId>* vertex_matches) {
+  assert(NULL != vertex_matches);
+  vertex_matches->clear();
+
+  // Return false if specified robot does not exist
+  if (db_BoW_.find(robot) == db_BoW_.end()) 
+    return false;
+  const OrbDatabase* db = db_BoW_.at(robot).get();
+
+  // Extract robot and pose id
+  size_t robot_query = vertex_query.first;
+  size_t pose_query = vertex_query.second;
+
+  // If query and database from same robot
+  if (params_.inter_robot_only_ && robot_query == robot) 
+    return false;
+  
+  // Check that robot is initialized
+  if (latest_bowvec_.find(robot_query) == latest_bowvec_.end()) {
+    latest_bowvec_[robot_query] = bow_vector_query;
+    return false;
+  }
+
+  // Compute nss factor with the previous keyframe of the query robot
+  double nss_factor = db->getVocabulary()->score(
+      bow_vector_query, latest_bowvec_[robot_query]);
+  if (nss_factor < params_.min_nss_factor_) 
+    return false;  
+
+  int max_possible_match_id = -1;
+  if (robot_query == robot) {
+    // If from the same robot, do not attempt to find loop closures if the
+    // poses are close to each other
+    if (pose_query > 0) {
+      max_possible_match_id =
+          static_cast<int>(next_pose_id_[robot_query]) - 1;
+      max_possible_match_id -= params_.dist_local_;
+      if (max_possible_match_id < 0) max_possible_match_id = 0;
+    }
+  }
+
+  // Query similar keyframes based on bow
+  DBoW2::QueryResults query_result;
+  db->query(bow_vector_query,
+            query_result,
+            params_.max_db_results_,
+            max_possible_match_id);
+
+  // Sort query_result in descending score. 
+  // This should be done by the query function already, 
+  // but we do it again in case that behavior changes in the future.
+  std::sort(query_result.begin(), query_result.end(), std::greater<DBoW2::Result>());
+
+  // Remove low scores from the QueryResults based on nss.
+  DBoW2::QueryResults::iterator query_it =
+      lower_bound(query_result.begin(),
+                  query_result.end(),
+                  DBoW2::Result(0, params_.alpha_ * nss_factor),
+                  DBoW2::Result::geq);
+  if (query_it != query_result.end()) {
+    query_result.resize(query_it - query_result.begin());
+  }
+
+  if (!query_result.empty()) {
+    DBoW2::Result best_result = query_result[0];
+
+    // Compute islands in the matches.
+    // An island is a group of matches with close frame_ids.
+    std::vector<MatchIsland> islands;
+    lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+    if (!islands.empty()) {
+      if (robot != robot_query) {
+        vertex_matches->push_back(std::make_pair(robot, best_result.Id));
+      } else {
+        // Check for temporal constraint if it is an single robot lc
+        // Find the best island grouping using MatchIsland sorting.
+        const MatchIsland& best_island =
+            *std::max_element(islands.begin(), islands.end());
+
+        // Run temporal constraint check on this best island.
+        bool pass_temporal_constraint =
+            lcd_tp_wrapper_->checkTemporalConstraint(pose_query, best_island);
+        if (pass_temporal_constraint) {
+          vertex_matches->push_back(std::make_pair(robot, best_result.Id));
+        }
+      }
+    }
+  }
+  
+  if (vertex_matches->size() > 0) return true;
+  return false;
+}
+
 bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
                                      const DBoW2::BowVector& bow_vector_query,
                                      std::vector<RobotPoseId>* vertex_matches) {
   assert(NULL != vertex_matches);
   vertex_matches->clear();
-  // Extract robot and pose id
-  size_t robot_query = vertex_query.first;
-  size_t pose_query = vertex_query.second;
-
+  // Detect loop with every robot in the database
   for (const auto& db : db_BoW_) {
-    // If query and database from same robot
-    if (params_.inter_robot_only_ && robot_query == db.first) continue;
-    // Check that robot is initialized
-    if (latest_bowvec_.find(robot_query) == latest_bowvec_.end()) {
-      latest_bowvec_[robot_query] = bow_vector_query;
-      continue;
-    }
-    double nss_factor = db.second->getVocabulary()->score(
-        bow_vector_query, latest_bowvec_[robot_query]);
-    int max_possible_match_id = -1;
-    if (robot_query == db.first) {
-      // If from the same robot, do not attempt to find loop closures if the
-      // poses are close to each other
-      if (pose_query > 0) {
-        max_possible_match_id =
-            static_cast<int>(next_pose_id_[robot_query]) - 1;
-        max_possible_match_id -= params_.dist_local_;
-        if (max_possible_match_id < 0) max_possible_match_id = 0;
-      }
-    }
-    if (nss_factor < params_.min_nss_factor_) {
-      continue;  // nss too low, look at next robot traj
-    }
-    DBoW2::QueryResults query_result;
-    db.second->query(bow_vector_query,
-                     query_result,
-                     params_.max_db_results_,
-                     max_possible_match_id);
-
-    // Sort query_result in descending score. 
-    // This should be done by the query function already, 
-    // but we do it again in case that behavior changes in the future.
-    std::sort(query_result.begin(), query_result.end(), std::greater<DBoW2::Result>());
-
-    // Remove low scores from the QueryResults based on nss.
-    DBoW2::QueryResults::iterator query_it =
-        lower_bound(query_result.begin(),
-                    query_result.end(),
-                    DBoW2::Result(0, params_.alpha_ * nss_factor),
-                    DBoW2::Result::geq);
-    if (query_it != query_result.end()) {
-      query_result.resize(query_it - query_result.begin());
-    }
-
-    if (!query_result.empty()) {
-      DBoW2::Result best_result = query_result[0];
-
-      // Compute islands in the matches.
-      // An island is a group of matches with close frame_ids.
-      std::vector<MatchIsland> islands;
-      lcd_tp_wrapper_->computeIslands(&query_result, &islands);
-      if (!islands.empty()) {
-        if (db.first != robot_query) {
-          vertex_matches->push_back(std::make_pair(db.first, best_result.Id));
-        } else {
-          // Check for temporal constraint if it is an single robot lc
-          // Find the best island grouping using MatchIsland sorting.
-          const MatchIsland& best_island =
-              *std::max_element(islands.begin(), islands.end());
-
-          // Run temporal constraint check on this best island.
-          bool pass_temporal_constraint =
-              lcd_tp_wrapper_->checkTemporalConstraint(pose_query, best_island);
-          if (pass_temporal_constraint) {
-            vertex_matches->push_back(std::make_pair(db.first, best_result.Id));
-          }
-        }
-      }
+    std::vector<RobotPoseId> vertex_matches_with_robot;
+    if (detectLoopWithRobot(db.first, 
+                            vertex_query,
+                            bow_vector_query,
+                            &vertex_matches_with_robot)) {
+      vertex_matches->insert(vertex_matches->end(), 
+                             vertex_matches_with_robot.begin(),
+                             vertex_matches_with_robot.end());
     }
   }
   if (vertex_matches->size() > 0) return true;
