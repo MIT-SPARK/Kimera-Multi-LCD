@@ -22,6 +22,8 @@
 namespace kimera_multi_lcd {
 
 typedef std::pair<size_t, size_t> RobotPoseId;
+typedef std::set<RobotPoseId> RobotPoseIdSet;
+typedef std::vector<RobotPoseId>  RobotPoseIdVector;
 
 typedef cv::Mat OrbDescriptor;
 typedef std::vector<OrbDescriptor> OrbDescriptorVec;
@@ -41,7 +43,23 @@ class VLCFrame {
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
   void initializeDescriptorsVector();
+  void pruneInvalidKeypoints();
 };  // class VLCFrame
+
+struct PotentialVLCEdge {
+ public:
+  PotentialVLCEdge() {}
+  PotentialVLCEdge(const RobotPoseId& vertex_src,
+                   const RobotPoseId& vertex_dst)
+              : vertex_src_(vertex_src),
+                vertex_dst_(vertex_dst) {}
+  RobotPoseId vertex_src_;
+  RobotPoseId vertex_dst_;
+  bool operator==(const PotentialVLCEdge& other) {
+    return (vertex_src_ == other.vertex_src_ &&
+            vertex_dst_ == other.vertex_dst_);
+  }
+};  // struct PotentialVLCEdge
 
 struct VLCEdge {
  public:

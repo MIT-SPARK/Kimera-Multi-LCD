@@ -38,4 +38,30 @@ void VLCFrame::initializeDescriptorsVector() {
   }
 }
 
+void VLCFrame::pruneInvalidKeypoints() {
+  std::vector<int> valid_indices;
+  for (int idx = 0; idx < keypoints_.size(); ++idx) {
+    const auto &p = keypoints_[idx];
+    if (p.norm() > 1e-8)
+      valid_indices.push_back(idx);
+  }
+  std::vector<gtsam::Vector3> keypoints_pruned;
+  std::vector<gtsam::Vector3> versors_pruned;
+  OrbDescriptorVec descriptors_vec_pruned;
+  OrbDescriptor descriptors_mat_pruned(valid_indices.size(), 
+                                       descriptors_mat_.size().width, 
+                                       descriptors_mat_.type());
+  for (int r = 0; r < valid_indices.size(); ++r) {
+    const int idx = valid_indices[r];
+    keypoints_pruned.push_back(keypoints_[idx]);
+    versors_pruned.push_back(versors_[idx]);
+    descriptors_vec_pruned.push_back(descriptors_vec_[idx]);
+    descriptors_mat_.row(idx).copyTo(descriptors_mat_pruned.row(r));
+  }
+  keypoints_ = keypoints_pruned;
+  versors_ = versors_pruned;
+  descriptors_mat_ = descriptors_mat_pruned;
+  descriptors_vec_ = descriptors_vec_pruned;
+}
+
 }  // namespace kimera_multi_lcd
