@@ -43,6 +43,7 @@ class VLCFrame {
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
   void initializeDescriptorsVector();
+  void pruneInvalidKeypoints();
 };  // class VLCFrame
 
 struct PotentialVLCEdge {
