@@ -271,8 +271,14 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
 
   opengv::points_t f_match, f_query;
   for (size_t i = 0; i < i_match.size(); i++) {
-    f_query.push_back(vlc_frames_[vertex_query].keypoints_.at(i_query[i]));
-    f_match.push_back(vlc_frames_[vertex_match].keypoints_.at(i_match[i]));
+    gtsam::Vector3 point_query =
+        vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+    gtsam::Vector3 point_match =
+        vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
+    if (point_query.norm() > 1e-3 && point_match.norm() > 1e-3) {
+      f_query.push_back(point_query);
+      f_match.push_back(point_match);
+    }
   }
 
   if (f_query.size() < 3) {
