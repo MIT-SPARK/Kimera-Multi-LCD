@@ -12,6 +12,7 @@
   <buildtool_depend>catkin_simple</buildtool_depend>
 
   <depend>DBoW2</depend>
+  <depend>dbow2_catkin</depend>
   <depend>gtsam</depend>
   <depend>Eigen</depend>
   <depend>OpenCV</depend>
