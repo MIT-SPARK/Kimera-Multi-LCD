@@ -68,6 +68,10 @@ class LoopClosureDetector {
     vlc_frames_[id] = frame;
   }
 
+  inline VLCFrame getVLCFrame(const RobotPoseId& id) const {
+    return vlc_frames_.at(id);
+  }
+
   inline bool frameExists(const RobotPoseId& id) const {
     return vlc_frames_.find(id) != vlc_frames_.end();
   }
