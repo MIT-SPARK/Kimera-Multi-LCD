@@ -37,9 +37,11 @@ class VLCFrame {
            const OrbDescriptor& descriptors_mat);
   size_t robot_id_;
   size_t pose_id_;
+  size_t submap_id_;  // ID of the submap that contains this frame (pose)
   std::vector<gtsam::Vector3> keypoints_;
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
+  gtsam::Pose3 T_submap_pose_;  // 3D pose in submap frame
   void initializeDescriptorsVector();
   void pruneInvalidKeypoints();
 };  // class VLCFrame
