@@ -34,12 +34,10 @@ class VLCFrame {
   VLCFrame(const size_t& robot_id,
            const size_t& pose_id,
            const std::vector<gtsam::Vector3>& keypoints_3d,
-           const std::vector<gtsam::Vector3>& versors,
            const OrbDescriptor& descriptors_mat);
   size_t robot_id_;
   size_t pose_id_;
   std::vector<gtsam::Vector3> keypoints_;
-  std::vector<gtsam::Vector3> versors_;
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
   void initializeDescriptorsVector();

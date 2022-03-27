@@ -229,8 +229,8 @@ bool LoopClosureDetector::geometricVerificationNister(
   query_versors.resize(i_query.size());
   match_versors.resize(i_match.size());
   for (size_t i = 0; i < i_match.size(); i++) {
-    query_versors[i] = vlc_frames_[vertex_query].versors_.at(i_query[i]);
-    match_versors[i] = vlc_frames_[vertex_match].versors_.at(i_match[i]);
+    query_versors[i] = vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+    match_versors[i] = vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
   }
 
   Adapter adapter(match_versors, query_versors);
