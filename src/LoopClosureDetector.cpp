@@ -327,7 +327,7 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
-    ROS_INFO_STREAM("Verified loop closure!");
+    // ROS_INFO_STREAM("Verified loop closure!");
 
     return true;
   }
