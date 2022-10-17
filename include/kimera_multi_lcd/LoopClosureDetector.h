@@ -1,7 +1,7 @@
 /*
  * Copyright Notes
  *
- * Authors: Yun Chang (yunchang@mit.edu)
+ * Authors: Yun Chang (yunchang@mit.edu) Yulun Tian (yulun@mit.edu)
  */
 
 #pragma once
@@ -52,17 +52,38 @@ class LoopClosureDetector {
                              const RobotPoseId& vertex_match,
                              std::vector<unsigned int>* i_query,
                              std::vector<unsigned int>* i_match) const;
-
+  /**
+   * @brief Perform monocular RANSAC
+   * @param vertex_query
+   * @param vertex_match
+   * @param inlier_query
+   * @param inlier_match
+   * @param R_query_match optional output that stores the estimated relative rotation
+   * from monocular RANSAC
+   * @return
+   */
   bool geometricVerificationNister(const RobotPoseId& vertex_query,
                                    const RobotPoseId& vertex_match,
                                    std::vector<unsigned int>* inlier_query,
-                                   std::vector<unsigned int>* inlier_match);
-
+                                   std::vector<unsigned int>* inlier_match,
+                                   gtsam::Rot3* R_query_match = nullptr);
+  /**
+   * @brief Perform stereo RANSAC
+   * @param vertex_query
+   * @param vertex_match
+   * @param inlier_query
+   * @param inlier_match
+   * @param T_query_match output 3D transformation from match frame to query frame
+   * @param R_query_match_prior prior estimates on the relative rotation, e.g, computed
+   * with mono RANSAC. Default to nullptr in which case no prior information is used.
+   * @return
+   */
   bool recoverPose(const RobotPoseId& vertex_query,
                    const RobotPoseId& vertex_match,
-                   const std::vector<unsigned int>& i_query,
-                   const std::vector<unsigned int>& i_match,
-                   gtsam::Pose3* T_query_match);
+                   std::vector<unsigned int>* inlier_query,
+                   std::vector<unsigned int>* inlier_match,
+                   gtsam::Pose3* T_query_match,
+                   const gtsam::Rot3* R_query_match_prior = nullptr);
 
   inline void addVLCFrame(const RobotPoseId& id, const VLCFrame& frame) {
     vlc_frames_[id] = frame;
@@ -82,6 +103,10 @@ class LoopClosureDetector {
 
   inline size_t getNumGeomVerifications() const {
     return total_geometric_verifications_;
+  }
+
+  inline const OrbVocabulary* getVocabulary() const {
+    return &vocab_;
   }
 
  private:

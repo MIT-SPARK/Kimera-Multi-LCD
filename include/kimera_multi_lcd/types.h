@@ -40,12 +40,14 @@ class VLCFrame {
   size_t robot_id_;
   size_t pose_id_;
   size_t submap_id_;  // ID of the submap that contains this frame (pose)
-  std::vector<gtsam::Vector3> keypoints_;
+  std::vector<gtsam::Vector3> keypoints_; // 3D keypoints
+  std::vector<gtsam::Vector3> versors_;   // bearing vector
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
   gtsam::Pose3 T_submap_pose_;  // 3D pose in submap frame
   void initializeDescriptorsVector();
-  void pruneInvalidKeypoints();
+  void toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const;
+  // void pruneInvalidKeypoints();
 };  // class VLCFrame
 
 struct PotentialVLCEdge {

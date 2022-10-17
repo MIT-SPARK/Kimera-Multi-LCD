@@ -1,7 +1,7 @@
 /*
  * Copyright Notes
  *
- * Authors: Yun Chang (yunchang@mit.edu)
+ * Authors: Yun Chang (yunchang@mit.edu) Yulun Tian (yulun@mit.edu)
  */
 
 #include <kimera_multi_lcd/LoopClosureDetector.h>
@@ -16,6 +16,7 @@
 #include <opengv/sac_problems/point_cloud/PointCloudSacProblem.hpp>
 #include <opengv/sac_problems/relative_pose/CentralRelativePoseSacProblem.hpp>
 #include <string>
+#include <glog/logging.h>
 
 using RansacProblem =
     opengv::sac_problems::relative_pose::CentralRelativePoseSacProblem;
@@ -215,7 +216,8 @@ bool LoopClosureDetector::geometricVerificationNister(
     const RobotPoseId& vertex_query,
     const RobotPoseId& vertex_match,
     std::vector<unsigned int>* inlier_query,
-    std::vector<unsigned int>* inlier_match) {
+    std::vector<unsigned int>* inlier_match,
+    gtsam::Rot3* R_query_match) {
   assert(NULL != inlier_query);
   assert(NULL != inlier_match);
 
@@ -229,11 +231,11 @@ bool LoopClosureDetector::geometricVerificationNister(
   query_versors.resize(i_query.size());
   match_versors.resize(i_match.size());
   for (size_t i = 0; i < i_match.size(); i++) {
-    query_versors[i] = vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
-    match_versors[i] = vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
+    query_versors[i] = vlc_frames_[vertex_query].versors_.at(i_query[i]);
+    match_versors[i] = vlc_frames_[vertex_match].versors_.at(i_match[i]);
   }
 
-  Adapter adapter(match_versors, query_versors);
+  Adapter adapter(query_versors, match_versors);
 
   // Use RANSAC to solve the central-relative-pose problem.
   opengv::sac::Ransac<RansacProblem> ransac;
@@ -250,6 +252,11 @@ bool LoopClosureDetector::geometricVerificationNister(
         static_cast<double>(ransac.inliers_.size()) / query_versors.size();
 
     if (inlier_percentage >= params_.ransac_inlier_percentage_mono_) {
+      if (R_query_match) {
+        opengv::transformation_t monoT_query_match = ransac.model_coefficients_;
+        *R_query_match = gtsam::Rot3(monoT_query_match.block<3, 3>(0, 0));
+      }
+
       inlier_query->clear();
       inlier_match->clear();
       for (auto idx : ransac.inliers_) {
@@ -264,10 +271,15 @@ bool LoopClosureDetector::geometricVerificationNister(
 
 bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
                                       const RobotPoseId& vertex_match,
-                                      const std::vector<unsigned int>& i_query,
-                                      const std::vector<unsigned int>& i_match,
-                                      gtsam::Pose3* T_query_match) {
+                                      std::vector<unsigned int>* inlier_query,
+                                      std::vector<unsigned int>* inlier_match,
+                                      gtsam::Pose3* T_query_match,
+                                      const gtsam::Rot3* R_query_match_prior) {
+  CHECK_NOTNULL(inlier_query);
+  CHECK_NOTNULL(inlier_match);
   total_geometric_verifications_++;
+  std::vector<unsigned int> i_query = *inlier_query;
+  std::vector<unsigned int> i_match = *inlier_match;
 
   opengv::points_t f_match, f_query;
   for (size_t i = 0; i < i_match.size(); i++) {
@@ -282,11 +294,15 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
   }
 
   if (f_query.size() < 3) {
-    ROS_INFO("Less than 3 putative correspondences.");
+    // ROS_INFO("Less than 3 putative correspondences.");
     return false;
   }
 
   AdapterStereo adapter(f_query, f_match);
+  if (R_query_match_prior) {
+    // Use input rotation estimate as prior
+    adapter.setR12(R_query_match_prior->matrix());
+  }
 
   // Compute transform using RANSAC 3-point method (Arun).
   std::shared_ptr<RansacProblemStereo> ptcloudproblem_ptr(
@@ -302,8 +318,8 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
   if (ransac_success) {
     if (ransac.inliers_.size() <
         params_.geometric_verification_min_inlier_count_) {
-      ROS_INFO_STREAM("Number of inlier correspondences after RANSAC "
-                      << ransac.inliers_.size() << " is too low.");
+      // ROS_INFO_STREAM("Number of inlier correspondences after RANSAC "
+      //                 << ransac.inliers_.size() << " is too low.");
       return false;
     }
 
@@ -311,23 +327,26 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
         static_cast<double>(ransac.inliers_.size()) / f_match.size();
     if (inlier_percentage <
         params_.geometric_verification_min_inlier_percentage_) {
-      ROS_INFO_STREAM("Percentage of inlier correspondences after RANSAC "
-                      << inlier_percentage << " is too low.");
+      // ROS_INFO_STREAM("Percentage of inlier correspondences after RANSAC "
+      //                 << inlier_percentage << " is too low.");
       return false;
     }
 
     opengv::transformation_t T = ransac.model_coefficients_;
 
     gtsam::Point3 estimated_translation(T(0, 3), T(1, 3), T(2, 3));
-    if (ransac.inliers_.size() < 500 && estimated_translation.norm() < 1e-5) {
-      ROS_WARN("Detected loop closure close to identity! ");
-    }
 
-    // Yulun: this is the relative pose from the query frame to the match frame?
+    // Output is the 3D transformation from the match frame to the query frame
     *T_query_match = gtsam::Pose3(gtsam::Rot3(T.block<3, 3>(0, 0)),
                                   gtsam::Point3(T(0, 3), T(1, 3), T(2, 3)));
 
-    // ROS_INFO_STREAM("Verified loop closure!");
+    // Populate inlier indices
+    inlier_query->clear();
+    inlier_match->clear();
+    for (auto idx : ransac.inliers_) {
+      inlier_query->push_back(i_query[idx]);
+      inlier_match->push_back(i_match[idx]);
+    }
 
     return true;
   }
