@@ -50,29 +50,14 @@ void LoopClosureDetector::loadAndInitialize(const LcdParams& params) {
   vocab_.load(params.vocab_path_);
 }
 
-bool LoopClosureDetector::bowExists(const kimera_multi_lcd::RobotPoseId& id) {
-  const size_t robot_id = id.first;
-  const size_t pose_id = id.second;
-  if (db_EntryId_to_poseId_.find(robot_id) != db_EntryId_to_poseId_.end()) {
-    if (db_EntryId_to_poseId_[robot_id].find(pose_id) !=
-        db_EntryId_to_poseId_[robot_id].end()) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void LoopClosureDetector::addBowVector(const RobotPoseId& id,
                                        const DBoW2::BowVector& bow_vector) {
-  // Do nothing if this vector is already added
-  if (bowExists(id))
-    return;
   const size_t robot_id = id.first;
   const size_t pose_id = id.second;
   if (db_BoW_.find(robot_id) == db_BoW_.end()) {
     db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
     db_EntryId_to_poseId_[robot_id] = std::unordered_map<DBoW2::EntryId, size_t>();
-    ROS_INFO("Initialized BoW for robot %lu", robot_id);
+    ROS_INFO("Initialized BoW for robot %lu.", robot_id);
   }
   // Add Bow vector to the robot's database
   DBoW2::EntryId entry_id = db_BoW_[robot_id]->add(bow_vector);
