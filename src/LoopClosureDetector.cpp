@@ -50,13 +50,35 @@ void LoopClosureDetector::loadAndInitialize(const LcdParams& params) {
   vocab_.load(params.vocab_path_);
 }
 
+bool LoopClosureDetector::bowExists(const kimera_multi_lcd::RobotPoseId& id) {
+  const size_t robot_id = id.first;
+  const size_t pose_id = id.second;
+  if (db_EntryId_to_poseId_.find(robot_id) != db_EntryId_to_poseId_.end()) {
+    if (db_EntryId_to_poseId_[robot_id].find(pose_id) !=
+        db_EntryId_to_poseId_[robot_id].end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void LoopClosureDetector::addBowVector(const RobotPoseId& id,
                                        const DBoW2::BowVector& bow_vector) {
-  if (db_BoW_.find(id.first) == db_BoW_.end()) {
-    db_BoW_[id.first] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
+  // Do nothing if this vector is already added
+  if (bowExists(id))
+    return;
+  const size_t robot_id = id.first;
+  const size_t pose_id = id.second;
+  if (db_BoW_.find(robot_id) == db_BoW_.end()) {
+    db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
+    db_EntryId_to_poseId_[robot_id] = std::unordered_map<DBoW2::EntryId, size_t>();
+    ROS_INFO("Initialized BoW for robot %lu", robot_id);
   }
-  next_pose_id_[id.first] = db_BoW_[id.first]->add(bow_vector);
-  latest_bowvec_[id.first] = bow_vector;
+  // Add Bow vector to the robot's database
+  DBoW2::EntryId entry_id = db_BoW_[robot_id]->add(bow_vector);
+  db_EntryId_to_poseId_[robot_id][entry_id] = pose_id;
+  next_pose_id_[robot_id] = pose_id + 1;
+  latest_bowvec_[robot_id] = bow_vector;
 }
 
 bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 
@@ -133,8 +155,9 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
     std::vector<MatchIsland> islands;
     lcd_tp_wrapper_->computeIslands(&query_result, &islands);
     if (!islands.empty()) {
+      const size_t best_match_pose_id = db_EntryId_to_poseId_[robot][best_result.Id];
       if (robot != robot_query) {
-        vertex_matches->push_back(std::make_pair(robot, best_result.Id));
+        vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
       } else {
         // Check for temporal constraint if it is an single robot lc
         // Find the best island grouping using MatchIsland sorting.
@@ -145,7 +168,7 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
         bool pass_temporal_constraint =
             lcd_tp_wrapper_->checkTemporalConstraint(pose_query, best_island);
         if (pass_temporal_constraint) {
-          vertex_matches->push_back(std::make_pair(robot, best_result.Id));
+          vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
         }
       }
     }
