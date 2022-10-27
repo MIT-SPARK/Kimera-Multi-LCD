@@ -22,7 +22,9 @@
 
 namespace kimera_multi_lcd {
 
-typedef std::pair<size_t, size_t> RobotPoseId;
+typedef size_t RobotId;
+typedef size_t PoseId;
+typedef std::pair<RobotId, PoseId> RobotPoseId;
 typedef std::set<RobotPoseId> RobotPoseIdSet;
 typedef std::vector<RobotPoseId>  RobotPoseIdVector;
 
