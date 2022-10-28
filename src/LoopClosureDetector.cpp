@@ -60,6 +60,13 @@ bool LoopClosureDetector::bowExists(const kimera_multi_lcd::RobotPoseId& id) con
   return false;
 }
 
+int LoopClosureDetector::numBoWForRobot(RobotId robot_id) const {
+  if (bow_vectors_.find(robot_id) != bow_vectors_.end()) {
+    return bow_vectors_.at(robot_id).size();
+  }
+  return 0;
+}
+
 DBoW2::BowVector LoopClosureDetector::getBoWVector(const kimera_multi_lcd::RobotPoseId& id) const {
   CHECK(bowExists(id));
   RobotId robot_id = id.first;

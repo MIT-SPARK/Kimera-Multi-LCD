@@ -89,8 +89,9 @@ class LoopClosureDetector {
     vlc_frames_[id] = frame;
   }
 
-
   bool bowExists(const RobotPoseId& id) const;
+
+  int numBoWForRobot(RobotId robot_id) const;
 
   DBoW2::BowVector getBoWVector(const RobotPoseId& id) const;
 
