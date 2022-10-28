@@ -89,9 +89,12 @@ class LoopClosureDetector {
     vlc_frames_[id] = frame;
   }
 
-  inline VLCFrame getVLCFrame(const RobotPoseId& id) const {
-    return vlc_frames_.at(id);
-  }
+
+  bool bowExists(const RobotPoseId& id) const;
+
+  DBoW2::BowVector getBoWVector(const RobotPoseId& id) const;
+
+  VLCFrame getVLCFrame(const RobotPoseId& id) const;
 
   inline bool frameExists(const RobotPoseId& id) const {
     return vlc_frames_.find(id) != vlc_frames_.end();
@@ -121,14 +124,11 @@ class LoopClosureDetector {
   size_t total_geometric_verifications_;
 
   // Database of BOW vectors from each robot (trajectory)
-  std::unordered_map<size_t, std::unique_ptr<OrbDatabase> > db_BoW_;
+  std::unordered_map<RobotId, std::unordered_map<PoseId, DBoW2::BowVector>> bow_vectors_;
+  std::unordered_map<RobotId, std::unique_ptr<OrbDatabase> > db_BoW_;
   // Map DBoW2 Entry Id to Pose Id
-  std::unordered_map<size_t,
-                     std::unordered_map<DBoW2::EntryId, size_t>> db_EntryId_to_poseId_;
-  // next pose id for each robot
-  std::unordered_map<size_t, size_t> next_pose_id_;
-  // latest bow vector for each robot
-  std::unordered_map<size_t, DBoW2::BowVector> latest_bowvec_;
+  std::unordered_map<RobotId,
+                     std::unordered_map<DBoW2::EntryId, PoseId>> db_EntryId_to_PoseId_;
 
   // LCD third party wrapper
   std::unique_ptr<LcdThirdPartyWrapper> lcd_tp_wrapper_;

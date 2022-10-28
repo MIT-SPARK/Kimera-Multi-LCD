@@ -50,20 +50,46 @@ void LoopClosureDetector::loadAndInitialize(const LcdParams& params) {
   vocab_.load(params.vocab_path_);
 }
 
+bool LoopClosureDetector::bowExists(const kimera_multi_lcd::RobotPoseId& id) const {
+  RobotId robot_id = id.first;
+  PoseId pose_id = id.second;
+  if (bow_vectors_.find(robot_id) != bow_vectors_.end() &&
+      bow_vectors_.at(robot_id).find(pose_id) != bow_vectors_.at(robot_id).end()) {
+    return true;
+  }
+  return false;
+}
+
+DBoW2::BowVector LoopClosureDetector::getBoWVector(const kimera_multi_lcd::RobotPoseId& id) const {
+  CHECK(bowExists(id));
+  RobotId robot_id = id.first;
+  PoseId pose_id = id.second;
+  return bow_vectors_.at(robot_id).at(pose_id);
+}
+
+VLCFrame LoopClosureDetector::getVLCFrame(const kimera_multi_lcd::RobotPoseId& id) const {
+  CHECK(frameExists(id));
+  return vlc_frames_.at(id);
+}
+
 void LoopClosureDetector::addBowVector(const RobotPoseId& id,
                                        const DBoW2::BowVector& bow_vector) {
   const size_t robot_id = id.first;
   const size_t pose_id = id.second;
+  // Skip if this BoW vector has been added
+  if (bowExists(id))
+    return;
   if (db_BoW_.find(robot_id) == db_BoW_.end()) {
     db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
-    db_EntryId_to_poseId_[robot_id] = std::unordered_map<DBoW2::EntryId, size_t>();
+    bow_vectors_[robot_id] = std::unordered_map<PoseId, DBoW2::BowVector>();
+    db_EntryId_to_PoseId_[robot_id] = std::unordered_map<DBoW2::EntryId, PoseId>();
     ROS_INFO("Initialized BoW for robot %lu.", robot_id);
   }
   // Add Bow vector to the robot's database
   DBoW2::EntryId entry_id = db_BoW_[robot_id]->add(bow_vector);
-  db_EntryId_to_poseId_[robot_id][entry_id] = pose_id;
-  next_pose_id_[robot_id] = pose_id + 1;
-  latest_bowvec_[robot_id] = bow_vector;
+  // Save the raw bow vectors
+  bow_vectors_[robot_id][pose_id] = bow_vector;
+  db_EntryId_to_PoseId_[robot_id][entry_id] = pose_id;
 }
 
 bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 
@@ -79,43 +105,33 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
   const OrbDatabase* db = db_BoW_.at(robot).get();
 
   // Extract robot and pose id
-  size_t robot_query = vertex_query.first;
-  size_t pose_query = vertex_query.second;
+  RobotId robot_query = vertex_query.first;
+  PoseId pose_query = vertex_query.second;
 
   // If query and database from same robot
   if (params_.inter_robot_only_ && robot_query == robot) 
     return false;
-  
-  // Check that robot is initialized
-  if (latest_bowvec_.find(robot_query) == latest_bowvec_.end()) {
-    latest_bowvec_[robot_query] = bow_vector_query;
+
+  // Try to locate BoW of previous frame
+  if (pose_query == 0)
+    return false;
+  RobotPoseId vertex_query_pred(robot_query, pose_query - 1);
+  if (!bowExists(vertex_query_pred)) {
+    ROS_ERROR("Cannot find previous BoW for query vertex (%lu,%lu).",
+              robot_query, pose_query);
     return false;
   }
-
   // Compute nss factor with the previous keyframe of the query robot
   double nss_factor = db->getVocabulary()->score(
-      bow_vector_query, latest_bowvec_[robot_query]);
+      bow_vector_query, getBoWVector(vertex_query_pred));
   if (nss_factor < params_.min_nss_factor_) 
-    return false;  
-
-  int max_possible_match_id = -1;
-  if (robot_query == robot) {
-    // If from the same robot, do not attempt to find loop closures if the
-    // poses are close to each other
-    if (pose_query > 0) {
-      max_possible_match_id =
-          static_cast<int>(next_pose_id_[robot_query]) - 1;
-      max_possible_match_id -= params_.dist_local_;
-      if (max_possible_match_id < 0) max_possible_match_id = 0;
-    }
-  }
+    return false;
 
   // Query similar keyframes based on bow
   DBoW2::QueryResults query_result;
   db->query(bow_vector_query,
             query_result,
-            params_.max_db_results_,
-            max_possible_match_id);
+            params_.max_db_results_);
 
   // Sort query_result in descending score. 
   // This should be done by the query function already, 
@@ -134,16 +150,20 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
-
-    // Compute islands in the matches.
-    // An island is a group of matches with close frame_ids.
-    std::vector<MatchIsland> islands;
-    lcd_tp_wrapper_->computeIslands(&query_result, &islands);
-    if (!islands.empty()) {
-      const size_t best_match_pose_id = db_EntryId_to_poseId_[robot][best_result.Id];
-      if (robot != robot_query) {
-        vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
-      } else {
+    const PoseId best_match_pose_id = db_EntryId_to_PoseId_[robot][best_result.Id];
+    if (robot != robot_query) {
+      vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
+    } else {
+      // Check dist_local param
+      int pose_query_int = (int) pose_query;
+      int pose_match_int = (int) best_match_pose_id;
+      if (std::abs(pose_query_int - pose_match_int) < params_.dist_local_)
+        return false;
+      // Compute islands in the matches.
+      // An island is a group of matches with close frame_ids.
+      std::vector<MatchIsland> islands;
+      lcd_tp_wrapper_->computeIslands(&query_result, &islands);
+      if (!islands.empty()) {
         // Check for temporal constraint if it is an single robot lc
         // Find the best island grouping using MatchIsland sorting.
         const MatchIsland& best_island =
@@ -159,7 +179,7 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
     }
   }
   
-  if (vertex_matches->size() > 0) return true;
+  if (!vertex_matches->empty()) return true;
   return false;
 }
 
