@@ -67,6 +67,26 @@ int LoopClosureDetector::numBoWForRobot(RobotId robot_id) const {
   return 0;
 }
 
+bool LoopClosureDetector::findPreviousBoWVector(const RobotPoseId& id, 
+                                                int window,
+                                                DBoW2::BowVector *previous_bow) {
+  CHECK_GE(window, 1);
+  RobotId robot_id = id.first;
+  PoseId pose_id = id.second;
+  for (size_t i = 1; i <= window; ++i) {
+    if (i > pose_id)
+      break;
+    RobotPoseId prev_id(robot_id, pose_id - i);
+    if (bowExists(prev_id)) {
+      if (previous_bow) {
+        *previous_bow = getBoWVector(prev_id);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 DBoW2::BowVector LoopClosureDetector::getBoWVector(const kimera_multi_lcd::RobotPoseId& id) const {
   CHECK(bowExists(id));
   RobotId robot_id = id.first;
@@ -122,15 +142,16 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
   // Try to locate BoW of previous frame
   if (pose_query == 0)
     return false;
-  RobotPoseId vertex_query_pred(robot_query, pose_query - 1);
-  if (!bowExists(vertex_query_pred)) {
-    ROS_ERROR("Cannot find previous BoW for query vertex (%lu,%lu).",
+
+  DBoW2::BowVector bow_vec_prev;
+  if (!findPreviousBoWVector(vertex_query, 5, &bow_vec_prev)) {
+    ROS_WARN("Cannot find previous BoW for query vertex (%lu,%lu).",
               robot_query, pose_query);
     return false;
   }
   // Compute nss factor with the previous keyframe of the query robot
   double nss_factor = db->getVocabulary()->score(
-      bow_vector_query, getBoWVector(vertex_query_pred));
+      bow_vector_query, bow_vec_prev);
   if (nss_factor < params_.min_nss_factor_) 
     return false;
 

@@ -91,6 +91,12 @@ class LoopClosureDetector {
 
   bool bowExists(const RobotPoseId& id) const;
 
+  // Try to find a BoW vector in the database with ID in the 
+  // range of (id-window, id-1)
+  bool findPreviousBoWVector(const RobotPoseId& id, 
+                             int window = 5,
+                             DBoW2::BowVector *previous_bow = nullptr);
+
   int numBoWForRobot(RobotId robot_id) const;
 
   DBoW2::BowVector getBoWVector(const RobotPoseId& id) const;
