@@ -56,11 +56,14 @@ struct PotentialVLCEdge {
  public:
   PotentialVLCEdge() {}
   PotentialVLCEdge(const RobotPoseId& vertex_src,
-                   const RobotPoseId& vertex_dst)
+                   const RobotPoseId& vertex_dst,
+                   double score = 0)
               : vertex_src_(vertex_src),
-                vertex_dst_(vertex_dst) {}
+                vertex_dst_(vertex_dst),
+                score_(score) {}
   RobotPoseId vertex_src_;
   RobotPoseId vertex_dst_;
+  double score_;
   bool operator==(const PotentialVLCEdge& other) {
     return (vertex_src_ == other.vertex_src_ &&
             vertex_dst_ == other.vertex_dst_);

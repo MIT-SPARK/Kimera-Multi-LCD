@@ -122,9 +122,12 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
 bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 
                           const RobotPoseId& vertex_query,
                           const DBoW2::BowVector& bow_vector_query,
-                          std::vector<RobotPoseId>* vertex_matches) {
+                          std::vector<RobotPoseId>* vertex_matches,
+                          std::vector<double>* scores) {
   assert(NULL != vertex_matches);
   vertex_matches->clear();
+  if (scores)
+    scores->clear();
 
   // Return false if specified robot does not exist
   if (db_BoW_.find(robot) == db_BoW_.end()) 
@@ -178,9 +181,12 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
 
   if (!query_result.empty()) {
     DBoW2::Result best_result = query_result[0];
+    double normalized_score = best_result.Score / nss_factor;
     const PoseId best_match_pose_id = db_EntryId_to_PoseId_[robot][best_result.Id];
     if (robot != robot_query) {
       vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
+      if (scores)
+        scores->push_back(normalized_score);
     } else {
       // Check dist_local param
       int pose_query_int = (int) pose_query;
@@ -202,10 +208,14 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
             lcd_tp_wrapper_->checkTemporalConstraint(pose_query, best_island);
         if (pass_temporal_constraint) {
           vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
+          if (scores)
+            scores->push_back(normalized_score);
         }
       }
     }
   }
+  if (scores)
+    CHECK_EQ(vertex_matches->size(), scores->size());
   
   if (!vertex_matches->empty()) return true;
   return false;
@@ -213,22 +223,33 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
 
 bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
                                      const DBoW2::BowVector& bow_vector_query,
-                                     std::vector<RobotPoseId>* vertex_matches) {
+                                     std::vector<RobotPoseId>* vertex_matches,
+                                     std::vector<double>* scores) {
   assert(NULL != vertex_matches);
   vertex_matches->clear();
+  if (scores)
+    scores->clear();
   // Detect loop with every robot in the database
   for (const auto& db : db_BoW_) {
     std::vector<RobotPoseId> vertex_matches_with_robot;
+    std::vector<double> scores_with_robot;
     if (detectLoopWithRobot(db.first, 
                             vertex_query,
                             bow_vector_query,
-                            &vertex_matches_with_robot)) {
+                            &vertex_matches_with_robot,
+                            &scores_with_robot)) {
       vertex_matches->insert(vertex_matches->end(), 
                              vertex_matches_with_robot.begin(),
                              vertex_matches_with_robot.end());
+      if (scores)
+        scores->insert(scores->end(),
+                       scores_with_robot.begin(),
+                       scores_with_robot.end());
     }
   }
-  if (vertex_matches->size() > 0) return true;
+  if (scores)
+    CHECK_EQ(vertex_matches->size(), scores->size());
+  if (!vertex_matches->empty()) return true;
   return false;
 }
 

@@ -37,16 +37,33 @@ class LoopClosureDetector {
   // Add new bow vector to databse
   void addBowVector(const RobotPoseId& id, const DBoW2::BowVector& bow_vector);
 
-  // Find loop closure against the trajectory of the specified robot
+  /**
+   * @brief Find loop closure against the trajectory of the specified robot
+   * @param robot
+   * @param vertex_query
+   * @param bow_vector_query
+   * @param vertex_matches
+   * @param scores If not null, also return the corresponding vector of normalized score (BoW score / nss_factor)
+   * @return
+   */
   bool detectLoopWithRobot(size_t robot, 
                            const RobotPoseId& vertex_query,
                            const DBoW2::BowVector& bow_vector_query,
-                           std::vector<RobotPoseId>* vertex_matches);
+                           std::vector<RobotPoseId>* vertex_matches,
+                           std::vector<double>* scores = nullptr);
 
-  // Find loop closure against all robots in the database
+  /**
+   * @brief Find loop closure against all robots in the database
+   * @param vertex_query
+   * @param bow_vector_query
+   * @param vertex_matches
+   * @param scores If not null, also return the corresponding vector of normalized score (BoW score / nss_factor)
+   * @return
+   */
   bool detectLoop(const RobotPoseId& vertex_query,
                   const DBoW2::BowVector& bow_vector_query,
-                  std::vector<RobotPoseId>* vertex_matches);
+                  std::vector<RobotPoseId>* vertex_matches,
+                  std::vector<double>* scores = nullptr);
 
   void computeMatchedIndices(const RobotPoseId& vertex_query,
                              const RobotPoseId& vertex_match,
