@@ -32,6 +32,7 @@ namespace kimera_multi_lcd {
 
 LoopClosureDetector::LoopClosureDetector() : lcd_tp_wrapper_(nullptr) {
   // Track stats
+  total_bow_matches_ = 0;
   total_geom_verifications_mono_ = 0;
   total_geometric_verifications_ = 0;
 }
@@ -217,7 +218,10 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
   if (scores)
     CHECK_EQ(vertex_matches->size(), scores->size());
   
-  if (!vertex_matches->empty()) return true;
+  if (!vertex_matches->empty()) {
+    total_bow_matches_ += vertex_matches->size();
+    return true;
+  }
   return false;
 }
 

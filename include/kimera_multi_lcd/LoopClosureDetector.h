@@ -124,6 +124,10 @@ class LoopClosureDetector {
     return vlc_frames_.find(id) != vlc_frames_.end();
   }
 
+  inline size_t totalBoWMatches() const {
+    return total_bow_matches_;
+  }
+
   inline size_t getNumGeomVerificationsMono() const {
     return total_geom_verifications_mono_;
   }
@@ -144,6 +148,7 @@ class LoopClosureDetector {
   OrbVocabulary vocab_;
 
   // Track loop closure stats
+  size_t total_bow_matches_;
   size_t total_geom_verifications_mono_;
   size_t total_geometric_verifications_;
 
