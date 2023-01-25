@@ -359,18 +359,20 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
   CHECK_NOTNULL(inlier_query);
   CHECK_NOTNULL(inlier_match);
   total_geometric_verifications_++;
-  std::vector<unsigned int> i_query = *inlier_query;
-  std::vector<unsigned int> i_match = *inlier_match;
+  std::vector<unsigned int> i_query; // input indices to stereo ransac
+  std::vector<unsigned int> i_match;
 
   opengv::points_t f_match, f_query;
-  for (size_t i = 0; i < i_match.size(); i++) {
+  for (size_t i = 0; i < inlier_match->size(); i++) {
     gtsam::Vector3 point_query =
-        vlc_frames_[vertex_query].keypoints_.at(i_query[i]);
+        vlc_frames_[vertex_query].keypoints_.at(inlier_query->at(i));
     gtsam::Vector3 point_match =
-        vlc_frames_[vertex_match].keypoints_.at(i_match[i]);
+        vlc_frames_[vertex_match].keypoints_.at(inlier_match->at(i));
     if (point_query.norm() > 1e-3 && point_match.norm() > 1e-3) {
       f_query.push_back(point_query);
       f_match.push_back(point_match);
+      i_query.push_back(inlier_query->at(i));
+      i_match.push_back(inlier_match->at(i));
     }
   }
 
