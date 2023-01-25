@@ -28,6 +28,39 @@ typedef std::pair<RobotId, PoseId> RobotPoseId;
 typedef std::set<RobotPoseId> RobotPoseIdSet;
 typedef std::vector<RobotPoseId>  RobotPoseIdVector;
 
+// Each edge in the pose graph is uniquely identified by four integers
+// (robot_src, frame_src, robot_dst, frame_dst)
+class EdgeID {
+ public:
+  size_t robot_src;
+  size_t robot_dst;
+  size_t frame_src;
+  size_t frame_dst;
+  EdgeID(size_t robot_from=0, size_t frame_from=0, size_t robot_to=0, size_t frame_to=0)
+      : robot_src(robot_from), frame_src(frame_from), robot_dst(robot_to), frame_dst(frame_to) {}
+  bool operator==(const EdgeID &other) const
+  { return (robot_src == other.robot_src
+            && frame_src == other.frame_src
+            && robot_dst == other.robot_dst
+            && frame_dst == other.frame_dst);
+  }
+};
+// Comparator for EdgeID
+struct CompareEdgeID {
+  bool operator()(const EdgeID &a, const EdgeID &b) const {
+    // Treat edge ID as an ordered tuple
+    const auto ta = std::make_tuple(a.robot_src,
+                                    a.robot_dst,
+                                    a.frame_src,
+                                    a.frame_dst);
+    const auto tb = std::make_tuple(b.robot_src,
+                                    b.robot_dst,
+                                    b.frame_src,
+                                    b.frame_dst);
+    return ta < tb;
+  }
+};
+
 typedef cv::Mat OrbDescriptor;
 typedef std::vector<OrbDescriptor> OrbDescriptorVec;
 
