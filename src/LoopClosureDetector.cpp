@@ -68,6 +68,13 @@ int LoopClosureDetector::numBoWForRobot(RobotId robot_id) const {
   return 0;
 }
 
+int LoopClosureDetector::latestPoseIdWithBoW(RobotId robot_id) const {
+  if (numBoWForRobot(robot_id) == 0) {
+    return -1;
+  }
+  return bow_latest_pose_id_.at(robot_id);
+}
+
 bool LoopClosureDetector::findPreviousBoWVector(const RobotPoseId& id, 
                                                 int window,
                                                 DBoW2::BowVector *previous_bow) {
@@ -111,6 +118,7 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
     db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
     bow_vectors_[robot_id] = std::unordered_map<PoseId, DBoW2::BowVector>();
     db_EntryId_to_PoseId_[robot_id] = std::unordered_map<DBoW2::EntryId, PoseId>();
+    bow_latest_pose_id_[robot_id] = pose_id;
     ROS_INFO("Initialized BoW for robot %lu.", robot_id);
   }
   // Add Bow vector to the robot's database
@@ -118,6 +126,10 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
   // Save the raw bow vectors
   bow_vectors_[robot_id][pose_id] = bow_vector;
   db_EntryId_to_PoseId_[robot_id][entry_id] = pose_id;
+  // Update latest pose ID with BoW
+  if (pose_id > bow_latest_pose_id_[robot_id]) {
+    bow_latest_pose_id_[robot_id] = pose_id;
+  }
 }
 
 bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 

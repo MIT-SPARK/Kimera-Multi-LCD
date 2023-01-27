@@ -116,6 +116,10 @@ class LoopClosureDetector {
 
   int numBoWForRobot(RobotId robot_id) const;
 
+  // For the input robot, return the latest PoseId where the BoW is stored
+  // If no BoW vector is found for this robot, -1 is returned instead
+  int latestPoseIdWithBoW(RobotId robot_id) const;
+
   DBoW2::BowVector getBoWVector(const RobotPoseId& id) const;
 
   VLCFrame getVLCFrame(const RobotPoseId& id) const;
@@ -155,6 +159,8 @@ class LoopClosureDetector {
   // Database of BOW vectors from each robot (trajectory)
   std::unordered_map<RobotId, std::unordered_map<PoseId, DBoW2::BowVector>> bow_vectors_;
   std::unordered_map<RobotId, std::unique_ptr<OrbDatabase> > db_BoW_;
+  // Keep track of latest pose Id with BoW for each robot
+  std::unordered_map<RobotId, PoseId> bow_latest_pose_id_;
   // Map DBoW2 Entry Id to Pose Id
   std::unordered_map<RobotId,
                      std::unordered_map<DBoW2::EntryId, PoseId>> db_EntryId_to_PoseId_;
