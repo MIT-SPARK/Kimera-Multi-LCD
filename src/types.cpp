@@ -35,22 +35,26 @@ VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
                                               msg.T_submap_pose.position.z));
 
   // Convert versors and 3D keypoints
-  pcl::PointCloud<pcl::PointXYZ> versors;
-  pcl::fromROSMsg(msg.versors, versors);
-  for (size_t i = 0; i < versors.size(); ++i) {
-    gtsam::Vector3 v(versors[i].x, versors[i].y, versors[i].z);
-    versors_.push_back(v);
-    const auto depth = msg.depths[i];
-    if (depth < 1e-3) {
-      // Depth is invalid for this keypoint and the 3D keypoint is set to zero.
-      // Zero keypoints will not be used during stereo RANSAC.
-      keypoints_.push_back(gtsam::Vector3::Zero());
-    } else {
-      // Depth is valid for this keypoint.
-      // We can recover the 3D point by multiplying with the bearing vector
-      // See sparseStereoReconstruction function in Stereo Matcher in Kimera-VIO.
-      keypoints_.push_back(depth * v / v(2));
+  if (!msg.versors.data.empty()) {
+    pcl::PointCloud<pcl::PointXYZ> versors;
+    pcl::fromROSMsg(msg.versors, versors);
+    for (size_t i = 0; i < versors.size(); ++i) {
+      gtsam::Vector3 v(versors[i].x, versors[i].y, versors[i].z);
+      versors_.push_back(v);
+      const auto depth = msg.depths[i];
+      if (depth < 1e-3) {
+        // Depth is invalid for this keypoint and the 3D keypoint is set to zero.
+        // Zero keypoints will not be used during stereo RANSAC.
+        keypoints_.push_back(gtsam::Vector3::Zero());
+      } else {
+        // Depth is valid for this keypoint.
+        // We can recover the 3D point by multiplying with the bearing vector
+        // See sparseStereoReconstruction function in Stereo Matcher in Kimera-VIO.
+        keypoints_.push_back(depth * v / v(2));
+      }
     }
+  } else {
+    ROS_WARN("[VLCFrame] Empty versors!");
   }
 
   // Convert descriptors
@@ -62,7 +66,7 @@ VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
     initializeDescriptorsVector();
   } 
   catch (...) {
-    ROS_ERROR("[VLCFrame] Failed to read descriptors!");
+    ROS_WARN("[VLCFrame] Failed to read descriptors!");
   }
   
 }
