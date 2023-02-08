@@ -54,11 +54,17 @@ VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
   }
 
   // Convert descriptors
-  sensor_msgs::ImageConstPtr ros_image_ptr(new sensor_msgs::Image(msg.descriptors_mat));
-  descriptors_mat_ =
-      cv_bridge::toCvCopy(ros_image_ptr, sensor_msgs::image_encodings::TYPE_8UC1)
-          ->image;
-  initializeDescriptorsVector();
+  try {
+    sensor_msgs::ImageConstPtr ros_image_ptr(new sensor_msgs::Image(msg.descriptors_mat));
+    descriptors_mat_ =
+        cv_bridge::toCvCopy(ros_image_ptr, sensor_msgs::image_encodings::TYPE_8UC1)
+            ->image;
+    initializeDescriptorsVector();
+  } 
+  catch (...) {
+    ROS_ERROR("[VLCFrame] Failed to read descriptors!");
+  }
+  
 }
 
 void VLCFrame::toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const {
