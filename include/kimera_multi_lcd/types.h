@@ -105,17 +105,29 @@ struct PotentialVLCEdge {
 
 struct VLCEdge {
  public:
-  VLCEdge() {}
+  VLCEdge(): stamp_ns_(0),
+             normalized_bow_score_(0),
+             mono_inliers_(0),
+             stereo_inliers_(0) {}
   VLCEdge(const RobotPoseId& vertex_src,
           const RobotPoseId& vertex_dst,
           const gtsam::Pose3 T_src_dst)
       : vertex_src_(vertex_src),
         vertex_dst_(vertex_dst),
-        T_src_dst_(T_src_dst) {}
+        T_src_dst_(T_src_dst),
+        stamp_ns_(0),
+        normalized_bow_score_(0),
+        mono_inliers_(0),
+        stereo_inliers_(0) {}
 
   RobotPoseId vertex_src_;
   RobotPoseId vertex_dst_;
   gtsam::Pose3 T_src_dst_;
+  // Additional optional statistics for logging
+  uint64_t stamp_ns_;  // time this loop closure is detected
+  double normalized_bow_score_; 
+  int mono_inliers_;
+  int stereo_inliers_;
   bool operator==(const VLCEdge& other) {
     return (vertex_src_ == other.vertex_src_ &&
             vertex_dst_ == other.vertex_dst_ &&
