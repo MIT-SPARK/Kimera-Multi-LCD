@@ -33,6 +33,7 @@ cs_add_library(${PROJECT_NAME}
   src/LoopClosureDetector.cpp
   src/LcdThirdPartyWrapper.cpp
   src/types.cpp
+  src/utils.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
