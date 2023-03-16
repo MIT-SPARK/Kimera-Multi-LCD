@@ -22,9 +22,44 @@
 
 namespace kimera_multi_lcd {
 
-typedef std::pair<size_t, size_t> RobotPoseId;
+typedef size_t RobotId;
+typedef size_t PoseId;
+typedef std::pair<RobotId, PoseId> RobotPoseId;
 typedef std::set<RobotPoseId> RobotPoseIdSet;
 typedef std::vector<RobotPoseId>  RobotPoseIdVector;
+
+// Each edge in the pose graph is uniquely identified by four integers
+// (robot_src, frame_src, robot_dst, frame_dst)
+class EdgeID {
+ public:
+  size_t robot_src;
+  size_t robot_dst;
+  size_t frame_src;
+  size_t frame_dst;
+  EdgeID(size_t robot_from=0, size_t frame_from=0, size_t robot_to=0, size_t frame_to=0)
+      : robot_src(robot_from), frame_src(frame_from), robot_dst(robot_to), frame_dst(frame_to) {}
+  bool operator==(const EdgeID &other) const
+  { return (robot_src == other.robot_src
+            && frame_src == other.frame_src
+            && robot_dst == other.robot_dst
+            && frame_dst == other.frame_dst);
+  }
+};
+// Comparator for EdgeID
+struct CompareEdgeID {
+  bool operator()(const EdgeID &a, const EdgeID &b) const {
+    // Treat edge ID as an ordered tuple
+    const auto ta = std::make_tuple(a.robot_src,
+                                    a.robot_dst,
+                                    a.frame_src,
+                                    a.frame_dst);
+    const auto tb = std::make_tuple(b.robot_src,
+                                    b.robot_dst,
+                                    b.frame_src,
+                                    b.frame_dst);
+    return ta < tb;
+  }
+};
 
 typedef cv::Mat OrbDescriptor;
 typedef std::vector<OrbDescriptor> OrbDescriptorVec;
@@ -40,23 +75,28 @@ class VLCFrame {
   size_t robot_id_;
   size_t pose_id_;
   size_t submap_id_;  // ID of the submap that contains this frame (pose)
-  std::vector<gtsam::Vector3> keypoints_;
+  std::vector<gtsam::Vector3> keypoints_; // 3D keypoints
+  std::vector<gtsam::Vector3> versors_;   // bearing vector
   OrbDescriptorVec descriptors_vec_;
   OrbDescriptor descriptors_mat_;
   gtsam::Pose3 T_submap_pose_;  // 3D pose in submap frame
   void initializeDescriptorsVector();
-  void pruneInvalidKeypoints();
+  void toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const;
+  // void pruneInvalidKeypoints();
 };  // class VLCFrame
 
 struct PotentialVLCEdge {
  public:
   PotentialVLCEdge() {}
   PotentialVLCEdge(const RobotPoseId& vertex_src,
-                   const RobotPoseId& vertex_dst)
+                   const RobotPoseId& vertex_dst,
+                   double score = 0)
               : vertex_src_(vertex_src),
-                vertex_dst_(vertex_dst) {}
+                vertex_dst_(vertex_dst),
+                score_(score) {}
   RobotPoseId vertex_src_;
   RobotPoseId vertex_dst_;
+  double score_;
   bool operator==(const PotentialVLCEdge& other) {
     return (vertex_src_ == other.vertex_src_ &&
             vertex_dst_ == other.vertex_dst_);
@@ -65,17 +105,29 @@ struct PotentialVLCEdge {
 
 struct VLCEdge {
  public:
-  VLCEdge() {}
+  VLCEdge(): stamp_ns_(0),
+             normalized_bow_score_(0),
+             mono_inliers_(0),
+             stereo_inliers_(0) {}
   VLCEdge(const RobotPoseId& vertex_src,
           const RobotPoseId& vertex_dst,
           const gtsam::Pose3 T_src_dst)
       : vertex_src_(vertex_src),
         vertex_dst_(vertex_dst),
-        T_src_dst_(T_src_dst) {}
+        T_src_dst_(T_src_dst),
+        stamp_ns_(0),
+        normalized_bow_score_(0),
+        mono_inliers_(0),
+        stereo_inliers_(0) {}
 
   RobotPoseId vertex_src_;
   RobotPoseId vertex_dst_;
   gtsam::Pose3 T_src_dst_;
+  // Additional optional statistics for logging
+  uint64_t stamp_ns_;  // time this loop closure is detected
+  double normalized_bow_score_; 
+  int mono_inliers_;
+  int stereo_inliers_;
   bool operator==(const VLCEdge& other) {
     return (vertex_src_ == other.vertex_src_ &&
             vertex_dst_ == other.vertex_dst_ &&
