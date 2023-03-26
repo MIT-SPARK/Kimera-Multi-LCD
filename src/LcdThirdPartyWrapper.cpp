@@ -64,8 +64,8 @@ LcdThirdPartyWrapper::~LcdThirdPartyWrapper() {}
 bool LcdThirdPartyWrapper::checkTemporalConstraint(const size_t& id,
                                                    const MatchIsland& island) {
   // temporal_entries_ starts at zero and counts the number of
-  if (temporal_entries_ == 0 || static_cast<int>(id - latest_query_id_) >
-                                    params_.max_nrFrames_between_queries_) {
+  if (temporal_entries_ == 0 ||
+      static_cast<int>(id - latest_query_id_) > params_.max_nrFrames_between_queries_) {
     temporal_entries_ = 1;
   } else {
     int a1 = static_cast<int>(latest_matched_island_.start_id_);
@@ -100,9 +100,8 @@ bool LcdThirdPartyWrapper::checkTemporalConstraint(const size_t& id,
 }
 
 /* ------------------------------------------------------------------------ */
-void LcdThirdPartyWrapper::computeIslands(
-    DBoW2::QueryResults* q,
-    std::vector<MatchIsland>* islands) const {
+void LcdThirdPartyWrapper::computeIslands(DBoW2::QueryResults* q,
+                                          std::vector<MatchIsland>* islands) const {
   assert(NULL != q);
   assert(NULL != islands);
   islands->clear();
@@ -145,10 +144,9 @@ void LcdThirdPartyWrapper::computeIslands(
         // end of island reached
         int length = last_island_entry - first_island_entry + 1;
         if (length >= params_.min_matches_per_island_) {
-          MatchIsland island =
-              MatchIsland(first_island_entry,
-                          last_island_entry,
-                          computeIslandScore(*q, i_first, i_last));
+          MatchIsland island = MatchIsland(first_island_entry,
+                                           last_island_entry,
+                                           computeIslandScore(*q, i_first, i_last));
 
           islands->push_back(island);
           islands->back().best_score_ = best_score;
@@ -164,8 +162,7 @@ void LcdThirdPartyWrapper::computeIslands(
     }
     // add last island
     // TODO: do we need this? why isn't it handled in prev for loop?
-    if (last_island_entry - first_island_entry + 1 >=
-        params_.min_matches_per_island_) {
+    if (last_island_entry - first_island_entry + 1 >= params_.min_matches_per_island_) {
       MatchIsland island = MatchIsland(first_island_entry,
                                        last_island_entry,
                                        computeIslandScore(*q, i_first, i_last));

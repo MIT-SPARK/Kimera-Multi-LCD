@@ -43,10 +43,11 @@ class LoopClosureDetector {
    * @param vertex_query
    * @param bow_vector_query
    * @param vertex_matches
-   * @param scores If not null, also return the corresponding vector of normalized score (BoW score / nss_factor)
+   * @param scores If not null, also return the corresponding vector of normalized score
+   * (BoW score / nss_factor)
    * @return
    */
-  bool detectLoopWithRobot(size_t robot, 
+  bool detectLoopWithRobot(size_t robot,
                            const RobotPoseId& vertex_query,
                            const DBoW2::BowVector& bow_vector_query,
                            std::vector<RobotPoseId>* vertex_matches,
@@ -57,7 +58,8 @@ class LoopClosureDetector {
    * @param vertex_query
    * @param bow_vector_query
    * @param vertex_matches
-   * @param scores If not null, also return the corresponding vector of normalized score (BoW score / nss_factor)
+   * @param scores If not null, also return the corresponding vector of normalized score
+   * (BoW score / nss_factor)
    * @return
    */
   bool detectLoop(const RobotPoseId& vertex_query,
@@ -108,11 +110,11 @@ class LoopClosureDetector {
 
   bool bowExists(const RobotPoseId& id) const;
 
-  // Try to find a BoW vector in the database with ID in the 
+  // Try to find a BoW vector in the database with ID in the
   // range of (id-window, id-1)
-  bool findPreviousBoWVector(const RobotPoseId& id, 
+  bool findPreviousBoWVector(const RobotPoseId& id,
                              int window = 5,
-                             DBoW2::BowVector *previous_bow = nullptr);
+                             DBoW2::BowVector* previous_bow = nullptr);
 
   int numBoWForRobot(RobotId robot_id) const;
 
@@ -128,9 +130,7 @@ class LoopClosureDetector {
     return vlc_frames_.find(id) != vlc_frames_.end();
   }
 
-  inline size_t totalBoWMatches() const {
-    return total_bow_matches_;
-  }
+  inline size_t totalBoWMatches() const { return total_bow_matches_; }
 
   inline size_t getNumGeomVerificationsMono() const {
     return total_geom_verifications_mono_;
@@ -140,9 +140,9 @@ class LoopClosureDetector {
     return total_geometric_verifications_;
   }
 
-  inline const OrbVocabulary* getVocabulary() const {
-    return &vocab_;
-  }
+  inline const OrbVocabulary* getVocabulary() const { return &vocab_; }
+
+  inline LcdParams getParams() const { return params_; }
 
  private:
   // Loop closure detection parameters
@@ -157,13 +157,14 @@ class LoopClosureDetector {
   size_t total_geometric_verifications_;
 
   // Database of BOW vectors from each robot (trajectory)
-  std::unordered_map<RobotId, std::unordered_map<PoseId, DBoW2::BowVector>> bow_vectors_;
-  std::unordered_map<RobotId, std::unique_ptr<OrbDatabase> > db_BoW_;
+  std::unordered_map<RobotId, std::unordered_map<PoseId, DBoW2::BowVector>>
+      bow_vectors_;
+  std::unordered_map<RobotId, std::unique_ptr<OrbDatabase>> db_BoW_;
   // Keep track of latest pose Id with BoW for each robot
   std::unordered_map<RobotId, PoseId> bow_latest_pose_id_;
   // Map DBoW2 Entry Id to Pose Id
-  std::unordered_map<RobotId,
-                     std::unordered_map<DBoW2::EntryId, PoseId>> db_EntryId_to_PoseId_;
+  std::unordered_map<RobotId, std::unordered_map<DBoW2::EntryId, PoseId>>
+      db_EntryId_to_PoseId_;
 
   // LCD third party wrapper
   std::unique_ptr<LcdThirdPartyWrapper> lcd_tp_wrapper_;

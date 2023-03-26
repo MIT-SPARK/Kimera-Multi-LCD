@@ -3,8 +3,8 @@
  *
  * Authors: Yun Chang (yunchang@mit.edu)
  */
-#include <sensor_msgs/image_encodings.h>
 #include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
 
 #include "kimera_multi_lcd/types.h"
 
@@ -12,13 +12,15 @@ namespace kimera_multi_lcd {
 
 VLCFrame::VLCFrame() {}
 
-VLCFrame::VLCFrame(const size_t& robot_id,
-                   const size_t& pose_id,
+VLCFrame::VLCFrame(const RobotId& robot_id,
+                   const PoseId& pose_id,
                    const std::vector<gtsam::Vector3>& keypoints_3d,
+                   const std::vector<gtsam::Vector3>& versors,
                    const OrbDescriptor& descriptors_mat)
     : robot_id_(robot_id),
       pose_id_(pose_id),
       keypoints_(keypoints_3d),
+      versors_(versors),
       descriptors_mat_(descriptors_mat) {
   assert(keypoints_.size() == descriptors_mat_.size().height);
   initializeDescriptorsVector();
@@ -59,16 +61,15 @@ VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
 
   // Convert descriptors
   try {
-    sensor_msgs::ImageConstPtr ros_image_ptr(new sensor_msgs::Image(msg.descriptors_mat));
+    sensor_msgs::ImageConstPtr ros_image_ptr(
+        new sensor_msgs::Image(msg.descriptors_mat));
     descriptors_mat_ =
         cv_bridge::toCvCopy(ros_image_ptr, sensor_msgs::image_encodings::TYPE_8UC1)
             ->image;
     initializeDescriptorsVector();
-  } 
-  catch (...) {
+  } catch (...) {
     ROS_WARN("[VLCFrame] Failed to read descriptors!");
   }
-  
 }
 
 void VLCFrame::toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const {
@@ -127,42 +128,9 @@ void VLCFrame::initializeDescriptorsVector() {
   descriptors_vec_.resize(descriptors_mat_.size().height);
 
   for (size_t i = 0; i < descriptors_vec_.size(); i++) {
-    descriptors_vec_[i] =
-        cv::Mat(1, L, descriptors_mat_.type());  // one row only
+    descriptors_vec_[i] = cv::Mat(1, L, descriptors_mat_.type());  // one row only
     descriptors_mat_.row(i).copyTo(descriptors_vec_[i].row(0));
   }
 }
-
-// void VLCFrame::pruneInvalidKeypoints() {
-//   std::vector<int> valid_indices;
-//   for (int idx = 0; idx < keypoints_.size(); ++idx) {
-//     const auto &p = keypoints_[idx];
-//     if (p.norm() > 1e-8)
-//       valid_indices.push_back(idx);
-//   }
-//   std::vector<gtsam::Vector3> keypoints_pruned;
-//   std::vector<gtsam::Vector3> versors_pruned;
-//   std::vector<cv::KeyPoint> keypoints_2d_pruned;
-//   OrbDescriptorVec descriptors_vec_pruned;
-//   OrbDescriptor descriptors_mat_pruned(valid_indices.size(), 
-//                                        descriptors_mat_.size().width, 
-//                                        descriptors_mat_.type());
-//   for (int r = 0; r < valid_indices.size(); ++r) {
-//     const int idx = valid_indices[r];
-//     keypoints_pruned.push_back(keypoints_[idx]);
-//     descriptors_vec_pruned.push_back(descriptors_vec_[idx]);
-//     descriptors_mat_.row(idx).copyTo(descriptors_mat_pruned.row(r));
-//     // Prune optional 2D keypoints
-//     if (!keypoints_2d_.empty())
-//       keypoints_2d_pruned.push_back(keypoints_2d_[idx]);
-//     if (!versors_.empty())
-//       versors_pruned.push_back(versors_[idx]);
-//   }
-//   keypoints_ = keypoints_pruned;
-//   versors_ = versors_pruned;
-//   keypoints_2d_ = keypoints_2d_pruned;
-//   descriptors_mat_ = descriptors_mat_pruned;
-//   descriptors_vec_ = descriptors_vec_pruned;
-// }
 
 }  // namespace kimera_multi_lcd

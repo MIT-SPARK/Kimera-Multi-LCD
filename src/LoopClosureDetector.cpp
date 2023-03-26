@@ -6,6 +6,7 @@
 
 #include <kimera_multi_lcd/LoopClosureDetector.h>
 
+#include <glog/logging.h>
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -16,14 +17,12 @@
 #include <opengv/sac_problems/point_cloud/PointCloudSacProblem.hpp>
 #include <opengv/sac_problems/relative_pose/CentralRelativePoseSacProblem.hpp>
 #include <string>
-#include <glog/logging.h>
 
 using RansacProblem =
     opengv::sac_problems::relative_pose::CentralRelativePoseSacProblem;
 using Adapter = opengv::relative_pose::CentralRelativeAdapter;
 using AdapterStereo = opengv::point_cloud::PointCloudAdapter;
-using RansacProblemStereo =
-    opengv::sac_problems::point_cloud::PointCloudSacProblem;
+using RansacProblemStereo = opengv::sac_problems::point_cloud::PointCloudSacProblem;
 using BearingVectors =
     std::vector<gtsam::Vector3, Eigen::aligned_allocator<gtsam::Vector3>>;
 using DMatchVec = std::vector<cv::DMatch>;
@@ -75,15 +74,14 @@ int LoopClosureDetector::latestPoseIdWithBoW(RobotId robot_id) const {
   return bow_latest_pose_id_.at(robot_id);
 }
 
-bool LoopClosureDetector::findPreviousBoWVector(const RobotPoseId& id, 
+bool LoopClosureDetector::findPreviousBoWVector(const RobotPoseId& id,
                                                 int window,
-                                                DBoW2::BowVector *previous_bow) {
+                                                DBoW2::BowVector* previous_bow) {
   CHECK_GE(window, 1);
   RobotId robot_id = id.first;
   PoseId pose_id = id.second;
-  for (size_t i = 1; i <= window; ++i) {
-    if (i > pose_id)
-      break;
+  for (size_t i = 1; i <= static_cast<size_t>(window); ++i) {
+    if (i > pose_id) break;
     RobotPoseId prev_id(robot_id, pose_id - i);
     if (bowExists(prev_id)) {
       if (previous_bow) {
@@ -95,14 +93,16 @@ bool LoopClosureDetector::findPreviousBoWVector(const RobotPoseId& id,
   return false;
 }
 
-DBoW2::BowVector LoopClosureDetector::getBoWVector(const kimera_multi_lcd::RobotPoseId& id) const {
+DBoW2::BowVector LoopClosureDetector::getBoWVector(
+    const kimera_multi_lcd::RobotPoseId& id) const {
   CHECK(bowExists(id));
   RobotId robot_id = id.first;
   PoseId pose_id = id.second;
   return bow_vectors_.at(robot_id).at(pose_id);
 }
 
-VLCFrame LoopClosureDetector::getVLCFrame(const kimera_multi_lcd::RobotPoseId& id) const {
+VLCFrame LoopClosureDetector::getVLCFrame(
+    const kimera_multi_lcd::RobotPoseId& id) const {
   CHECK(frameExists(id));
   return vlc_frames_.at(id);
 }
@@ -112,8 +112,7 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
   const size_t robot_id = id.first;
   const size_t pose_id = id.second;
   // Skip if this BoW vector has been added
-  if (bowExists(id))
-    return;
+  if (bowExists(id)) return;
   if (db_BoW_.find(robot_id) == db_BoW_.end()) {
     db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
     bow_vectors_[robot_id] = std::unordered_map<PoseId, DBoW2::BowVector>();
@@ -132,19 +131,17 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
   }
 }
 
-bool LoopClosureDetector::detectLoopWithRobot(size_t robot, 
-                          const RobotPoseId& vertex_query,
-                          const DBoW2::BowVector& bow_vector_query,
-                          std::vector<RobotPoseId>* vertex_matches,
-                          std::vector<double>* scores) {
+bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
+                                              const RobotPoseId& vertex_query,
+                                              const DBoW2::BowVector& bow_vector_query,
+                                              std::vector<RobotPoseId>* vertex_matches,
+                                              std::vector<double>* scores) {
   assert(NULL != vertex_matches);
   vertex_matches->clear();
-  if (scores)
-    scores->clear();
+  if (scores) scores->clear();
 
   // Return false if specified robot does not exist
-  if (db_BoW_.find(robot) == db_BoW_.end()) 
-    return false;
+  if (db_BoW_.find(robot) == db_BoW_.end()) return false;
   const OrbDatabase* db = db_BoW_.at(robot).get();
 
   // Extract robot and pose id
@@ -152,33 +149,28 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
   PoseId pose_query = vertex_query.second;
 
   // If query and database from same robot
-  if (params_.inter_robot_only_ && robot_query == robot) 
-    return false;
+  if (params_.inter_robot_only_ && robot_query == robot) return false;
 
   // Try to locate BoW of previous frame
-  if (pose_query == 0)
-    return false;
+  if (pose_query == 0) return false;
 
   DBoW2::BowVector bow_vec_prev;
   if (!findPreviousBoWVector(vertex_query, 5, &bow_vec_prev)) {
     ROS_WARN("Cannot find previous BoW for query vertex (%lu,%lu).",
-              robot_query, pose_query);
+             robot_query,
+             pose_query);
     return false;
   }
   // Compute nss factor with the previous keyframe of the query robot
-  double nss_factor = db->getVocabulary()->score(
-      bow_vector_query, bow_vec_prev);
-  if (nss_factor < params_.min_nss_factor_) 
-    return false;
+  double nss_factor = db->getVocabulary()->score(bow_vector_query, bow_vec_prev);
+  if (nss_factor < params_.min_nss_factor_) return false;
 
   // Query similar keyframes based on bow
   DBoW2::QueryResults query_result;
-  db->query(bow_vector_query,
-            query_result,
-            params_.max_db_results_);
+  db->query(bow_vector_query, query_result, params_.max_db_results_);
 
-  // Sort query_result in descending score. 
-  // This should be done by the query function already, 
+  // Sort query_result in descending score.
+  // This should be done by the query function already,
   // but we do it again in case that behavior changes in the future.
   std::sort(query_result.begin(), query_result.end(), std::greater<DBoW2::Result>());
 
@@ -198,14 +190,12 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
     const PoseId best_match_pose_id = db_EntryId_to_PoseId_[robot][best_result.Id];
     if (robot != robot_query) {
       vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
-      if (scores)
-        scores->push_back(normalized_score);
+      if (scores) scores->push_back(normalized_score);
     } else {
       // Check dist_local param
-      int pose_query_int = (int) pose_query;
-      int pose_match_int = (int) best_match_pose_id;
-      if (std::abs(pose_query_int - pose_match_int) < params_.dist_local_)
-        return false;
+      int pose_query_int = (int)pose_query;
+      int pose_match_int = (int)best_match_pose_id;
+      if (std::abs(pose_query_int - pose_match_int) < params_.dist_local_) return false;
       // Compute islands in the matches.
       // An island is a group of matches with close frame_ids.
       std::vector<MatchIsland> islands;
@@ -221,15 +211,13 @@ bool LoopClosureDetector::detectLoopWithRobot(size_t robot,
             lcd_tp_wrapper_->checkTemporalConstraint(pose_query, best_island);
         if (pass_temporal_constraint) {
           vertex_matches->push_back(std::make_pair(robot, best_match_pose_id));
-          if (scores)
-            scores->push_back(normalized_score);
+          if (scores) scores->push_back(normalized_score);
         }
       }
     }
   }
-  if (scores)
-    CHECK_EQ(vertex_matches->size(), scores->size());
-  
+  if (scores) CHECK_EQ(vertex_matches->size(), scores->size());
+
   if (!vertex_matches->empty()) {
     total_bow_matches_ += vertex_matches->size();
     return true;
@@ -243,28 +231,25 @@ bool LoopClosureDetector::detectLoop(const RobotPoseId& vertex_query,
                                      std::vector<double>* scores) {
   assert(NULL != vertex_matches);
   vertex_matches->clear();
-  if (scores)
-    scores->clear();
+  if (scores) scores->clear();
   // Detect loop with every robot in the database
   for (const auto& db : db_BoW_) {
     std::vector<RobotPoseId> vertex_matches_with_robot;
     std::vector<double> scores_with_robot;
-    if (detectLoopWithRobot(db.first, 
+    if (detectLoopWithRobot(db.first,
                             vertex_query,
                             bow_vector_query,
                             &vertex_matches_with_robot,
                             &scores_with_robot)) {
-      vertex_matches->insert(vertex_matches->end(), 
+      vertex_matches->insert(vertex_matches->end(),
                              vertex_matches_with_robot.begin(),
                              vertex_matches_with_robot.end());
       if (scores)
-        scores->insert(scores->end(),
-                       scores_with_robot.begin(),
-                       scores_with_robot.end());
+        scores->insert(
+            scores->end(), scores_with_robot.begin(), scores_with_robot.end());
     }
   }
-  if (scores)
-    CHECK_EQ(vertex_matches->size(), scores->size());
+  if (scores) CHECK_EQ(vertex_matches->size(), scores->size());
   if (!vertex_matches->empty()) return true;
   return false;
 }
@@ -286,10 +271,8 @@ void LoopClosureDetector::computeMatchedIndices(
   VLCFrame frame_match = vlc_frames_.find(vertex_match)->second;
 
   try {
-    orb_feature_matcher_->knnMatch(frame_query.descriptors_mat_,
-                                   frame_match.descriptors_mat_,
-                                   matches,
-                                   2u);
+    orb_feature_matcher_->knnMatch(
+        frame_query.descriptors_mat_, frame_match.descriptors_mat_, matches, 2u);
   } catch (cv::Exception& e) {
     ROS_ERROR("Failed KnnMatch in ComputeMatchedIndices. ");
   }
@@ -333,8 +316,8 @@ bool LoopClosureDetector::geometricVerificationNister(
   // Use RANSAC to solve the central-relative-pose problem.
   opengv::sac::Ransac<RansacProblem> ransac;
 
-  ransac.sac_model_ = std::make_shared<RansacProblem>(
-      adapter, RansacProblem::Algorithm::NISTER, true);
+  ransac.sac_model_ =
+      std::make_shared<RansacProblem>(adapter, RansacProblem::Algorithm::NISTER, true);
   ransac.max_iterations_ = params_.max_ransac_iterations_mono_;
   ransac.threshold_ = params_.ransac_threshold_mono_;
 
@@ -371,7 +354,7 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
   CHECK_NOTNULL(inlier_query);
   CHECK_NOTNULL(inlier_match);
   total_geometric_verifications_++;
-  std::vector<unsigned int> i_query; // input indices to stereo ransac
+  std::vector<unsigned int> i_query;  // input indices to stereo ransac
   std::vector<unsigned int> i_match;
 
   opengv::points_t f_match, f_query;
@@ -411,8 +394,7 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
   bool ransac_success = ransac.computeModel();
 
   if (ransac_success) {
-    if (ransac.inliers_.size() <
-        params_.geometric_verification_min_inlier_count_) {
+    if (ransac.inliers_.size() < params_.geometric_verification_min_inlier_count_) {
       // ROS_INFO_STREAM("Number of inlier correspondences after RANSAC "
       //                 << ransac.inliers_.size() << " is too low.");
       return false;
@@ -420,8 +402,7 @@ bool LoopClosureDetector::recoverPose(const RobotPoseId& vertex_query,
 
     double inlier_percentage =
         static_cast<double>(ransac.inliers_.size()) / f_match.size();
-    if (inlier_percentage <
-        params_.geometric_verification_min_inlier_percentage_) {
+    if (inlier_percentage < params_.geometric_verification_min_inlier_percentage_) {
       // ROS_INFO_STREAM("Percentage of inlier correspondences after RANSAC "
       //                 << inlier_percentage << " is too low.");
       return false;
