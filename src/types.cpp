@@ -112,7 +112,7 @@ void VLCFrame::toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const {
   pcl::toROSMsg(versors, msg->versors);
 
   // Convert descriptors
-  assert(frame.descriptors_mat_.type() ==
+  assert(descriptors_mat_.type() ==
          CV_8UC1);  // check that the matrix is of type CV_8U
   cv_bridge::CvImage cv_img;
   // cv_img.header   = in_msg->header; // Yulun: need to set header explicitly?
