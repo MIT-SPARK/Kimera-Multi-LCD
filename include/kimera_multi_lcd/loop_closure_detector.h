@@ -9,7 +9,7 @@
 #include <DBoW2/DBoW2.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
-#include <kimera_multi_lcd/LcdThirdPartyWrapper.h>
+#include <kimera_multi_lcd/lcd_third_party.h>
 #include <kimera_multi_lcd/types.h>
 #include <ros/ros.h>
 #include <ros/time.h>
@@ -124,7 +124,11 @@ class LoopClosureDetector {
 
   DBoW2::BowVector getBoWVector(const RobotPoseId& id) const;
 
+  PoseBowVector getBoWVectors(const RobotId& robot_id) const;
+
   VLCFrame getVLCFrame(const RobotPoseId& id) const;
+
+  std::map<PoseId, VLCFrame> getVLCFrames(const RobotId& robot_id) const;
 
   inline bool frameExists(const RobotPoseId& id) const {
     return vlc_frames_.find(id) != vlc_frames_.end();
@@ -157,8 +161,7 @@ class LoopClosureDetector {
   size_t total_geometric_verifications_;
 
   // Database of BOW vectors from each robot (trajectory)
-  std::unordered_map<RobotId, std::unordered_map<PoseId, DBoW2::BowVector>>
-      bow_vectors_;
+  std::unordered_map<RobotId, PoseBowVector> bow_vectors_;
   std::unordered_map<RobotId, std::unique_ptr<OrbDatabase>> db_BoW_;
   // Keep track of latest pose Id with BoW for each robot
   std::unordered_map<RobotId, PoseId> bow_latest_pose_id_;

@@ -38,15 +38,15 @@ POSSIBILITY OF SUCH DAMAGE.
  * -------------------------------------------------------------------------- */
 
 /**
- * @file ThirdPartyWrapper.cpp
+ * @file lcd_third_party.cpp
  * @brief Wrapper for functions of DLoopDetector (see copyright notice above).
  * @author Marcus Abate
  */
 
+#include "kimera_multi_lcd/lcd_third_party.h"
+
 #include <algorithm>
 #include <vector>
-
-#include "kimera_multi_lcd/LcdThirdPartyWrapper.h"
 
 namespace kimera_multi_lcd {
 

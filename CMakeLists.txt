@@ -30,14 +30,30 @@ if(NOT TARGET DBoW2::DBoW2)
 endif()
 find_package(PCL REQUIRED)
 
+configure_file(cmake/json.CMakeLists.txt.in json-download/CMakeLists.txt)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/json-download" OUTPUT_QUIET
+)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build .
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/json-download" OUTPUT_QUIET
+)
+
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+add_subdirectory(${CMAKE_BINARY_DIR}/json-src ${CMAKE_BINARY_DIR}/json-build)
+
 catkin_simple()
 
 
 cs_add_library(${PROJECT_NAME} 
-  src/LoopClosureDetector.cpp
-  src/LcdThirdPartyWrapper.cpp
+  src/loop_closure_detector.cpp
+  src/lcd_third_party.cpp
   src/types.cpp
   src/utils.cpp
+  src/serializer.cpp
+  src/io.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -49,29 +65,10 @@ target_link_libraries(${PROJECT_NAME}
   DBoW2::DBoW2
   tbb
   glog
+  nlohmann_json::nlohmann_json
 )
 
-### Download and unzip the vocabularly file
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/vocab/mit_voc.yml)
-  message(STATUS "Downloading vocabulary file from drive.")
-  file(DOWNLOAD
-       https://drive.google.com/uc?export=download&confirm=9iBg&id=1N4y0HbgA3PHQ73ZxFJvy5dgvV_0cTBYF
-       ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip
-       SHOW_PROGRESS
-       STATUS voc_download_success
-       TIMEOUT 60)
-  if(voc_download_success)
-    message(STATUS "Unzipping vocabulary file.")
-
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip
-                            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/)
-    execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip)
-  else(voc_download_success)
-    message(STATUS "Failed to download vocabulary file. Please download manually.")
-  endif(voc_download_success)
-else()
-  message(STATUS "Vocabulary file exists, will not download.")
-endif()
+include(cmake/vocab_download.cmake)
 
 # Unit tests 
 # set(TEST_DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/test/data")

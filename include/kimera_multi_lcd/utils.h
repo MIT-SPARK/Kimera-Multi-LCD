@@ -14,6 +14,8 @@
 #include <pose_graph_tools/VLCFrameMsg.h>
 #include <pose_graph_tools/VLCFrameQuery.h>
 
+#include <map>
+
 #include "kimera_multi_lcd/types.h"
 
 namespace kimera_multi_lcd {

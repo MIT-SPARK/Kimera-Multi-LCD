@@ -27,6 +27,7 @@ typedef size_t PoseId;
 typedef std::pair<RobotId, PoseId> RobotPoseId;
 typedef std::set<RobotPoseId> RobotPoseIdSet;
 typedef std::vector<RobotPoseId> RobotPoseIdVector;
+typedef std::map<PoseId, DBoW2::BowVector> PoseBowVector;
 
 // Each edge in the pose graph is uniquely identified by four integers
 // (robot_src, frame_src, robot_dst, frame_dst)

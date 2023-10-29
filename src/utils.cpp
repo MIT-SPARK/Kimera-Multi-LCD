@@ -5,6 +5,7 @@
  */
 
 #include "kimera_multi_lcd/utils.h"
+
 #include <fstream>
 
 namespace kimera_multi_lcd {
@@ -94,4 +95,5 @@ size_t computeVLCFramePayloadBytes(const pose_graph_tools::VLCFrameMsg& msg) {
   bytes += sizeof(msg.versors.data[0]) * msg.versors.data.size();
   return bytes;
 }
+
 }  // namespace kimera_multi_lcd
