@@ -37,18 +37,18 @@ void from_json(const json& j, pcl::PointCloud<pcl::PointXYZ>& points) {
 
 }  // namespace pcl
 
-namespace pose_graph_tools {
+namespace pose_graph_tools_msgs {
 
-void to_json(json& j, const pose_graph_tools::BowVector& bow_vector) {
+void to_json(json& j, const pose_graph_tools_msgs::BowVector& bow_vector) {
   j = json{{"word_ids", bow_vector.word_ids}, {"word_values", bow_vector.word_values}};
 }
 
-void from_json(const json& j, pose_graph_tools::BowVector& bow_vector) {
+void from_json(const json& j, pose_graph_tools_msgs::BowVector& bow_vector) {
   j.at("word_ids").get_to(bow_vector.word_ids);
   j.at("word_values").get_to(bow_vector.word_values);
 }
 
-void to_json(json& j, const pose_graph_tools::VLCFrameMsg& vlc_frame) {
+void to_json(json& j, const pose_graph_tools_msgs::VLCFrameMsg& vlc_frame) {
   pcl::PointCloud<pcl::PointXYZ> versors;
   pcl::fromROSMsg(vlc_frame.versors, versors);
 
@@ -73,7 +73,7 @@ void to_json(json& j, const pose_graph_tools::VLCFrameMsg& vlc_frame) {
              {"qw", vlc_frame.T_submap_pose.orientation.w}}}};
 }
 
-void from_json(const json& j, pose_graph_tools::VLCFrameMsg& vlc_frame) {
+void from_json(const json& j, pose_graph_tools_msgs::VLCFrameMsg& vlc_frame) {
   j.at("robot_id").get_to(vlc_frame.robot_id);
   j.at("pose_id").get_to(vlc_frame.pose_id);
   j.at("submap_id").get_to(vlc_frame.submap_id);
@@ -99,4 +99,4 @@ void from_json(const json& j, pose_graph_tools::VLCFrameMsg& vlc_frame) {
   j.at("T_submap_pose").at("qz").get_to(T_submap_R.z);
   j.at("T_submap_pose").at("qw").get_to(T_submap_R.w);
 }
-}  // namespace pose_graph_tools
+}  // namespace pose_graph_tools_msgs

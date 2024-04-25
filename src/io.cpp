@@ -15,7 +15,7 @@ namespace kimera_multi_lcd {
 
 using nlohmann::json;
 
-void saveBowVectors(const std::map<PoseId, pose_graph_tools::BowVector>& bow_vectors,
+void saveBowVectors(const std::map<PoseId, pose_graph_tools_msgs::BowVector>& bow_vectors,
                     const std::string& filename) {
   std::ofstream outfile(filename);
   json record;
@@ -30,15 +30,15 @@ void saveBowVectors(const std::map<PoseId, pose_graph_tools::BowVector>& bow_vec
 
 void saveBowVectors(const std::map<PoseId, DBoW2::BowVector>& bow_vectors,
                     const std::string& filename) {
-  std::map<PoseId, pose_graph_tools::BowVector> pg_bow_vectors;
+  std::map<PoseId, pose_graph_tools_msgs::BowVector> pg_bow_vectors;
   for (const auto& id_bow : bow_vectors) {
-    pg_bow_vectors[id_bow.first] = pose_graph_tools::BowVector();
+    pg_bow_vectors[id_bow.first] = pose_graph_tools_msgs::BowVector();
     BowVectorToMsg(id_bow.second, &pg_bow_vectors[id_bow.first]);
   }
   saveBowVectors(pg_bow_vectors, filename);
 }
 
-void saveVLCFrames(const std::map<PoseId, pose_graph_tools::VLCFrameMsg>& vlc_frames,
+void saveVLCFrames(const std::map<PoseId, pose_graph_tools_msgs::VLCFrameMsg>& vlc_frames,
                    const std::string& filename) {
   std::ofstream outfile(filename);
   json record;
@@ -53,9 +53,9 @@ void saveVLCFrames(const std::map<PoseId, pose_graph_tools::VLCFrameMsg>& vlc_fr
 
 void saveVLCFrames(const std::map<PoseId, VLCFrame>& vlc_frames,
                    const std::string& filename) {
-  std::map<PoseId, pose_graph_tools::VLCFrameMsg> pg_vlc_frames;
+  std::map<PoseId, pose_graph_tools_msgs::VLCFrameMsg> pg_vlc_frames;
   for (const auto& id_frame : vlc_frames) {
-    pg_vlc_frames[id_frame.first] = pose_graph_tools::VLCFrameMsg();
+    pg_vlc_frames[id_frame.first] = pose_graph_tools_msgs::VLCFrameMsg();
     VLCFrameToMsg(id_frame.second, &pg_vlc_frames[id_frame.first]);
   }
   saveVLCFrames(pg_vlc_frames, filename);
@@ -63,7 +63,7 @@ void saveVLCFrames(const std::map<PoseId, VLCFrame>& vlc_frames,
 
 // Save BoW vectors
 void loadBowVectors(const std::string& filename,
-                    std::map<PoseId, pose_graph_tools::BowVector>& bow_vectors) {
+                    std::map<PoseId, pose_graph_tools_msgs::BowVector>& bow_vectors) {
   std::stringstream ss;
   std::ifstream infile(filename);
   if (!infile) {
@@ -80,7 +80,7 @@ void loadBowVectors(const std::string& filename,
 
 void loadBowVectors(const std::string& filename,
                     std::map<PoseId, DBoW2::BowVector>& bow_vectors) {
-  std::map<PoseId, pose_graph_tools::BowVector> pg_bow_vectors;
+  std::map<PoseId, pose_graph_tools_msgs::BowVector> pg_bow_vectors;
   loadBowVectors(filename, pg_bow_vectors);
 
   for (const auto& id_bow : pg_bow_vectors) {
@@ -91,7 +91,7 @@ void loadBowVectors(const std::string& filename,
 
 // Save VLC Frames
 void loadVLCFrames(const std::string& filename,
-                   std::map<PoseId, pose_graph_tools::VLCFrameMsg>& vlc_frames) {
+                   std::map<PoseId, pose_graph_tools_msgs::VLCFrameMsg>& vlc_frames) {
   std::stringstream ss;
   std::ifstream infile(filename);
   if (!infile) {
@@ -108,7 +108,7 @@ void loadVLCFrames(const std::string& filename,
 
 void loadVLCFrames(const std::string& filename,
                    std::map<PoseId, VLCFrame>& vlc_frames) {
-  std::map<PoseId, pose_graph_tools::VLCFrameMsg> pg_vlc_frames;
+  std::map<PoseId, pose_graph_tools_msgs::VLCFrameMsg> pg_vlc_frames;
   loadVLCFrames(filename, pg_vlc_frames);
   for (const auto& id_frame : pg_vlc_frames) {
     vlc_frames[id_frame.first] = VLCFrame();

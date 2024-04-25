@@ -10,7 +10,7 @@
 
 namespace kimera_multi_lcd {
 
-void BowVectorToMsg(const DBoW2::BowVector& bow_vec, pose_graph_tools::BowVector* msg) {
+void BowVectorToMsg(const DBoW2::BowVector& bow_vec, pose_graph_tools_msgs::BowVector* msg) {
   msg->word_ids.clear();
   msg->word_values.clear();
   for (auto it = bow_vec.begin(); it != bow_vec.end(); ++it) {
@@ -19,7 +19,7 @@ void BowVectorToMsg(const DBoW2::BowVector& bow_vec, pose_graph_tools::BowVector
   }
 }
 
-void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
+void BowVectorFromMsg(const pose_graph_tools_msgs::BowVector& msg,
                       DBoW2::BowVector* bow_vec) {
   assert(msg.word_ids.size() == msg.word_values.size());
   bow_vec->clear();
@@ -28,22 +28,22 @@ void BowVectorFromMsg(const pose_graph_tools::BowVector& msg,
   }
 }
 
-void VLCFrameToMsg(const VLCFrame& frame, pose_graph_tools::VLCFrameMsg* msg) {
+void VLCFrameToMsg(const VLCFrame& frame, pose_graph_tools_msgs::VLCFrameMsg* msg) {
   frame.toROSMessage(msg);
 }
 
-void VLCFrameFromMsg(const pose_graph_tools::VLCFrameMsg& msg, VLCFrame* frame) {
+void VLCFrameFromMsg(const pose_graph_tools_msgs::VLCFrameMsg& msg, VLCFrame* frame) {
   *frame = VLCFrame(msg);
 }
 
-void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg) {
+void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools_msgs::PoseGraphEdge* msg) {
   // Yulun: this function currently does not assign covariance!
 
   msg->robot_from = edge.vertex_src_.first;
   msg->key_from = edge.vertex_src_.second;
   msg->robot_to = edge.vertex_dst_.first;
   msg->key_to = edge.vertex_dst_.second;
-  msg->type = pose_graph_tools::PoseGraphEdge::LOOPCLOSE;
+  msg->type = pose_graph_tools_msgs::PoseGraphEdge::LOOPCLOSE;
 
   gtsam::Pose3 pose = edge.T_src_dst_;
   gtsam::Quaternion quat = pose.rotation().toQuaternion();
@@ -59,7 +59,7 @@ void VLCEdgeToMsg(const VLCEdge& edge, pose_graph_tools::PoseGraphEdge* msg) {
   msg->pose.position.z = position.z();
 }
 
-void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge) {
+void VLCEdgeFromMsg(const pose_graph_tools_msgs::PoseGraphEdge& msg, VLCEdge* edge) {
   edge->vertex_src_ = std::make_pair(msg.robot_from, msg.key_from);
   edge->vertex_dst_ = std::make_pair(msg.robot_to, msg.key_to);
 
@@ -74,7 +74,7 @@ void VLCEdgeFromMsg(const pose_graph_tools::PoseGraphEdge& msg, VLCEdge* edge) {
   edge->T_src_dst_ = T_src_dst;
 }
 
-size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg) {
+size_t computeBowQueryPayloadBytes(const pose_graph_tools_msgs::BowQuery& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);
@@ -83,7 +83,7 @@ size_t computeBowQueryPayloadBytes(const pose_graph_tools::BowQuery& msg) {
   return bytes;
 }
 
-size_t computeVLCFramePayloadBytes(const pose_graph_tools::VLCFrameMsg& msg) {
+size_t computeVLCFramePayloadBytes(const pose_graph_tools_msgs::VLCFrameMsg& msg) {
   size_t bytes = 0;
   bytes += sizeof(msg.robot_id);
   bytes += sizeof(msg.pose_id);
