@@ -11,7 +11,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
-#include <pose_graph_tools/VLCFrameMsg.h>
+#include <pose_graph_tools_msgs/VLCFrameMsg.h>
 #include <opencv/cv.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -27,6 +27,7 @@ typedef size_t PoseId;
 typedef std::pair<RobotId, PoseId> RobotPoseId;
 typedef std::set<RobotPoseId> RobotPoseIdSet;
 typedef std::vector<RobotPoseId> RobotPoseIdVector;
+typedef std::map<PoseId, DBoW2::BowVector> PoseBowVector;
 
 // Each edge in the pose graph is uniquely identified by four integers
 // (robot_src, frame_src, robot_dst, frame_dst)
@@ -70,7 +71,7 @@ class VLCFrame {
            const std::vector<gtsam::Vector3>& keypoints_3d,
            const std::vector<gtsam::Vector3>& versors,
            const OrbDescriptor& descriptors_mat);
-  VLCFrame(const pose_graph_tools::VLCFrameMsg& msg);
+  VLCFrame(const pose_graph_tools_msgs::VLCFrameMsg& msg);
   size_t robot_id_;
   size_t pose_id_;
   size_t submap_id_;  // ID of the submap that contains this frame (pose)
@@ -80,7 +81,7 @@ class VLCFrame {
   OrbDescriptor descriptors_mat_;
   gtsam::Pose3 T_submap_pose_;  // 3D pose in submap frame
   void initializeDescriptorsVector();
-  void toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const;
+  void toROSMessage(pose_graph_tools_msgs::VLCFrameMsg* msg) const;
   // void pruneInvalidKeypoints();
 };  // class VLCFrame
 

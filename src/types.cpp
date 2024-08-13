@@ -26,7 +26,7 @@ VLCFrame::VLCFrame(const RobotId& robot_id,
   initializeDescriptorsVector();
 }
 
-VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
+VLCFrame::VLCFrame(const pose_graph_tools_msgs::VLCFrameMsg& msg)
     : robot_id_(msg.robot_id), pose_id_(msg.pose_id), submap_id_(msg.submap_id) {
   T_submap_pose_ = gtsam::Pose3(gtsam::Rot3(msg.T_submap_pose.orientation.w,
                                             msg.T_submap_pose.orientation.x,
@@ -72,7 +72,7 @@ VLCFrame::VLCFrame(const pose_graph_tools::VLCFrameMsg& msg)
   }
 }
 
-void VLCFrame::toROSMessage(pose_graph_tools::VLCFrameMsg* msg) const {
+void VLCFrame::toROSMessage(pose_graph_tools_msgs::VLCFrameMsg* msg) const {
   msg->robot_id = robot_id_;
   msg->pose_id = pose_id_;
 

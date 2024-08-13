@@ -4,9 +4,9 @@
  * Authors: Yun Chang (yunchang@mit.edu) Yulun Tian (yulun@mit.edu)
  */
 
-#include <kimera_multi_lcd/LoopClosureDetector.h>
-
 #include <glog/logging.h>
+#include <kimera_multi_lcd/loop_closure_detector.h>
+
 #include <cassert>
 #include <fstream>
 #include <iostream>
@@ -101,10 +101,28 @@ DBoW2::BowVector LoopClosureDetector::getBoWVector(
   return bow_vectors_.at(robot_id).at(pose_id);
 }
 
+PoseBowVector LoopClosureDetector::getBoWVectors(const RobotId& robot_id) const {
+  if (!bow_vectors_.count(robot_id)) {
+    return PoseBowVector();
+  }
+  return bow_vectors_.at(robot_id);
+}
+
 VLCFrame LoopClosureDetector::getVLCFrame(
     const kimera_multi_lcd::RobotPoseId& id) const {
   CHECK(frameExists(id));
   return vlc_frames_.at(id);
+}
+
+std::map<PoseId, VLCFrame> LoopClosureDetector::getVLCFrames(
+    const RobotId& robot_id) const {
+  std::map<PoseId, VLCFrame> vlc_frames;
+  for (const auto& robot_pose_id_vlc : vlc_frames_) {
+    if (robot_pose_id_vlc.first.first == robot_id) {
+      vlc_frames[robot_pose_id_vlc.first.second] = robot_pose_id_vlc.second;
+    }
+  }
+  return vlc_frames;
 }
 
 void LoopClosureDetector::addBowVector(const RobotPoseId& id,
@@ -115,7 +133,7 @@ void LoopClosureDetector::addBowVector(const RobotPoseId& id,
   if (bowExists(id)) return;
   if (db_BoW_.find(robot_id) == db_BoW_.end()) {
     db_BoW_[robot_id] = std::unique_ptr<OrbDatabase>(new OrbDatabase(vocab_));
-    bow_vectors_[robot_id] = std::unordered_map<PoseId, DBoW2::BowVector>();
+    bow_vectors_[robot_id] = PoseBowVector();
     db_EntryId_to_PoseId_[robot_id] = std::unordered_map<DBoW2::EntryId, PoseId>();
     bow_latest_pose_id_[robot_id] = pose_id;
     ROS_INFO("Initialized BoW for robot %lu.", robot_id);
