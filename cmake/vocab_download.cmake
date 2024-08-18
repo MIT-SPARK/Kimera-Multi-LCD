@@ -3,7 +3,7 @@ message("[Kimera-Multi-LCD] Trying to download and unzip the vocabulary file..."
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/vocab/mit_voc.yml)
   message("[Kimera-Multi-LCD] Downloading vocabulary file from drive.")
   file(DOWNLOAD
-       https://github.com/LimHyungTae/kimera-multi-vocab/raw/master/vocab.zip
+       https://github.com/MIT-SPARK/kimera-multi-vocab/raw/master/vocab.zip
        ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip
        STATUS voc_download_success
        )
