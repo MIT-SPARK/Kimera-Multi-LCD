@@ -13,7 +13,7 @@ if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/vocab/mit_voc.yml)
     execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip
                             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/)
     execute_process(COMMAND ${CMAKE_COMMAND} -E rm ${CMAKE_CURRENT_SOURCE_DIR}/vocab.zip)
-    message("[Kimera-Multi-LCD] Complete! Check your `${Kimera-Multi-LCD}/vocab/mit_voc.yml.")
+    message("[Kimera-Multi-LCD] Complete! Check your `${Kimera-Multi-LCD}/vocab/mit_voc.yml`.")
   else()
     message(FATAL_ERROR "[Kimera-Multi-LCD] Failed to download vocabulary file. Please download manually.")
   endif()
