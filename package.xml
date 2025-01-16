@@ -16,7 +16,7 @@
   <depend>gtsam</depend>
   <depend>Eigen</depend>
   <depend>OpenCV</depend>
-  <depend>opengv</depend>
+  <depend>opengv_catkin</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
